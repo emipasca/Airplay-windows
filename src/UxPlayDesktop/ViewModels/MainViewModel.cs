@@ -76,6 +76,7 @@ public class MainViewModel : ViewModelBase
                 {
                     Metrics.Reset();
                     _metricsLog.EndSession();
+                    _pixelPerfectFittedFor = null;   // next stream starts at 1:1 again
                 }
 
                 if (value == ServerState.Streaming)
@@ -472,7 +473,7 @@ public class MainViewModel : ViewModelBase
             {
                 Settings.TargetDisplayIndex = value.Index;
                 OnPropertyChanged();
-                PlaceVideoWindow(value.Index);
+                PlaceVideoWindow(value.Index, force: true);
                 if (Settings.AlwaysOnTop)
                 {
                     _windowService.SetAlwaysOnTop(true);
@@ -1113,14 +1114,22 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Places the video window: 1:1 pixel-perfect for the Work preset (no scaling blur),
-    /// otherwise the original move/fullscreen behaviour.</summary>
-    private void PlaceVideoWindow(int displayIndex)
+    /// <summary>Stream size the video window was last fitted to; null = not fitted this stream.</summary>
+    private string? _pixelPerfectFittedFor;
+
+    /// <summary>Places the video window: for the Work preset, starts it at 1:1 (picture area =
+    /// stream size, no scaling blur) in a normal, resizable window, fitting only once per stream
+    /// or resolution change so the user's own resizing is kept; otherwise the original
+    /// move/fullscreen behaviour. <paramref name="force"/> refits (window just appeared, display
+    /// or setting changed).</summary>
+    private void PlaceVideoWindow(int displayIndex, bool force = false)
     {
         if (IsWorkPreset && Settings.WorkPixelPerfect && !Settings.ForceFullscreen &&
             TryParseResolution(Session.ActiveResolution, out var w, out var h))
         {
-            _windowService.FitVideoWindowPixelPerfect(displayIndex, w, h, Settings.BorderlessWindow);
+            if (!force && _pixelPerfectFittedFor == Session.ActiveResolution) return;
+            _windowService.FitVideoWindowPixelPerfect(displayIndex, w, h, borderless: false);
+            _pixelPerfectFittedFor = Session.ActiveResolution;
         }
         else
         {
@@ -1186,7 +1195,7 @@ public class MainViewModel : ViewModelBase
             Settings.WorkPixelPerfect = value;
             _settingsService.Save(Settings);
             OnPropertyChanged();
-            if (IsStreaming) PlaceVideoWindow(Settings.TargetDisplayIndex);
+            if (IsStreaming) PlaceVideoWindow(Settings.TargetDisplayIndex, force: true);
         }
     }
 
@@ -1210,7 +1219,7 @@ public class MainViewModel : ViewModelBase
                 {
                     RunOnUi(() =>
                     {
-                        PlaceVideoWindow(Settings.TargetDisplayIndex);
+                        PlaceVideoWindow(Settings.TargetDisplayIndex, force: true);
                         if (Settings.AlwaysOnTop)
                         {
                             _windowService.SetAlwaysOnTop(true, hwnd);
@@ -1224,7 +1233,8 @@ public class MainViewModel : ViewModelBase
                         {
                             RunOnUi(() =>
                             {
-                                PlaceVideoWindow(Settings.TargetDisplayIndex);
+                                // the engine may resize its window once video starts: fit again
+                                PlaceVideoWindow(Settings.TargetDisplayIndex, force: true);
                             });
                         }
                     }

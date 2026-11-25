@@ -23,20 +23,20 @@ public enum PerformancePreset
 
 /// <summary>
 /// Fixed stream profile for the "Work" preset: a MacBook used with this PC as a
-/// silent, low-latency extended desktop. 1728x1117 is the MacBook Pro 16" default
+/// silent, low-latency extended desktop. 1512x982 is the MacBook Pro 14" default
 /// "looks like" size, so windows keep the same size when moved to this display.
 /// </summary>
 public static class WorkPreset
 {
-    public const int Width = 1728;
-    public const int Height = 1117;
+    public const int Width = 1512;
+    public const int Height = 982;
     /// <summary>2x ("Retina") request: the Mac renders HiDPI and sends twice the detail.</summary>
     public const int RetinaWidth = Width * 2;
     public const int RetinaHeight = Height * 2;
-    /// <summary>MacBook Pro 16" panel size in mm (3456x2234 at ~254 ppi), reported so macOS
-    /// recognises a high-density display and lays it out at 1728x1117 points.</summary>
-    public const int RetinaPhysicalWidthMm = 345;
-    public const int RetinaPhysicalHeightMm = 223;
+    /// <summary>MacBook Pro 14" panel size in mm (3024x1964 at ~254 ppi), reported so macOS
+    /// recognises a high-density display and lays it out at 1512x982 points.</summary>
+    public const int RetinaPhysicalWidthMm = 302;
+    public const int RetinaPhysicalHeightMm = 196;
 
     /// <summary>Fixed buffers for the live latency modes (Smooth is automatic).</summary>
     public const int FastBufferMs = 12;

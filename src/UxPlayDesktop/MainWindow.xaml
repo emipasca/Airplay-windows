@@ -552,7 +552,7 @@
                                                 <RadioButton GroupName="LatencyMode" Content="◼ Smooth" IsChecked="{Binding IsSmoothMode}" Foreground="White" FontSize="12" />
                                             </StackPanel>
                                             <TextBlock Text="{Binding LatencyModeHint}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
-                                            <CheckBox Content="Pixel-perfect 1:1 — no scaling blur, borderless and centered (recommended)" IsChecked="{Binding WorkPixelPerfect}"
+                                            <CheckBox Content="Start at pixel-perfect 1:1 — centered, no scaling blur; resize freely afterwards (recommended)" IsChecked="{Binding WorkPixelPerfect}"
                                                       Foreground="White" FontSize="12" Margin="0,10,0,0" />
                                             <CheckBox Content="Sharp (Retina) — 2× detail but much more delay (applies on server restart)" IsChecked="{Binding WorkRetina}"
                                                       Foreground="White" FontSize="12" Margin="0,6,0,0" />

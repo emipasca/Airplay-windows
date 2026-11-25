@@ -173,7 +173,7 @@ public class LocalizationService : ILocalizationService
             ["PresetCinema"] = "High Quality Cinema [~500-1000 ms] (Smooth Video)",
             ["PresetCinemaDesc"] = "Larger jitter buffer (~500-1000 ms) and adaptive sync for artifact-free movie and multimedia streaming.",
             ["PresetWork"] = "Work: MacBook Extended Display (Fast/Smooth, No Audio)",
-            ["PresetWorkDesc"] = "1728x1117 at 60 FPS (MacBook Pro 16\" default size). H.265 with Direct3D 12 GPU decoding, a Fast/Smooth latency switch, and audio off so sound stays on the MacBook.",
+            ["PresetWorkDesc"] = "1512x982 at 60 FPS (MacBook Pro 14\" default size). H.265 with Direct3D 12 GPU decoding, a Fast/Smooth latency switch, and audio off so sound stays on the MacBook.",
             ["PresetAudio"] = "Audio Streaming Only [~200-250 ms] (Music & Podcasts)",
             ["PresetAudioDesc"] = "Headless audio receiver mode with ~200-250 ms audio buffer for streaming music, podcasts, or system audio without video overhead.",
             ["PresetCustom"] = "Custom Configuration [Configurable Delay]",

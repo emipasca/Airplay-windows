@@ -96,7 +96,9 @@ public class MockWindowManagementService : IWindowManagementService
         LastMovedDisplayIndex = displayIndex;
         LastForceFullscreen = false;
         LastPixelPerfect = (width, height, borderless);
+        PixelPerfectCalls++;
     }
+    public int PixelPerfectCalls { get; private set; }
     public void MoveVideoWindowToDisplay(int displayIndex, bool forceFullscreen = false)
     {
         LastMovedDisplayIndex = displayIndex;
@@ -157,8 +159,8 @@ public class MainViewModelTests
     }
 
     [Theory]
-    [InlineData("1728x1117", true, 1728, 1117)]
-    [InlineData("3456X2234", true, 3456, 2234)]
+    [InlineData("1512x982", true, 1512, 982)]
+    [InlineData("3024X1964", true, 3024, 1964)]
     [InlineData("", false, 0, 0)]
     [InlineData("abc", false, 0, 0)]
     [InlineData("0x100", false, 0, 100)]
@@ -176,10 +178,20 @@ public class MainViewModelTests
         var windows = new MockWindowManagementService();
         var vm = new MainViewModel(_settingsService, _processManager, _bonjourService, _autostartService, windowService: windows);
 
-        _processManager.CurrentSession.ActiveResolution = "1728x1117";
+        _processManager.CurrentSession.ActiveResolution = "1512x982";
         _processManager.TriggerState(ServerState.Streaming);
         _processManager.TriggerSessionUpdated(_processManager.CurrentSession);
-        Assert.Equal((1728, 1117, true), windows.LastPixelPerfect);
+        Assert.Equal((1512, 982, false), windows.LastPixelPerfect);   // normal, resizable window
+        Assert.Equal(1, windows.PixelPerfectCalls);
+
+        // later session updates must not snap a user-resized window back
+        _processManager.TriggerSessionUpdated(_processManager.CurrentSession);
+        Assert.Equal(1, windows.PixelPerfectCalls);
+
+        // ...but a resolution change refits
+        _processManager.CurrentSession.ActiveResolution = "1512x984";
+        _processManager.TriggerSessionUpdated(_processManager.CurrentSession);
+        Assert.Equal(2, windows.PixelPerfectCalls);
 
         _settingsService.CurrentSettings.ForceFullscreen = true;
         _processManager.TriggerSessionUpdated(_processManager.CurrentSession);

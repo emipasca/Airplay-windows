@@ -50,17 +50,17 @@ public class ArgumentBuilderTests
         };
 
         var standardDefault = _builder.BuildArguments(settings).ToList();
-        Assert.Equal("1728x1117@60", standardDefault[standardDefault.IndexOf("-s") + 1]);   // Retina is opt-in
+        Assert.Equal("1512x982@60", standardDefault[standardDefault.IndexOf("-s") + 1]);   // Retina is opt-in
 
         settings.WorkRetina = true;
         var args = _builder.BuildArguments(settings).ToList();
-        Assert.Equal("3456x2234@60", args[args.IndexOf("-s") + 1]);
+        Assert.Equal("3024x1964@60", args[args.IndexOf("-s") + 1]);
         Assert.Contains("-hidpi", args);
-        Assert.Equal("345x223", args[args.IndexOf("-physical") + 1]);
+        Assert.Equal("302x196", args[args.IndexOf("-physical") + 1]);
 
         settings.WorkRetina = false;
         var standard = _builder.BuildArguments(settings).ToList();
-        Assert.Equal("1728x1117@60", standard[standard.IndexOf("-s") + 1]);
+        Assert.Equal("1512x982@60", standard[standard.IndexOf("-s") + 1]);
         Assert.DoesNotContain("-hidpi", standard);
         Assert.DoesNotContain("-physical", standard);
         Assert.Equal("60", args[args.IndexOf("-fps") + 1]);
@@ -152,10 +152,10 @@ public class ArgumentBuilderTests
     }
 
     [Fact]
-    public void Work_IsDefaultPreset_AtMacBookPro16Size()
+    public void Work_IsDefaultPreset_AtMacBookPro14Size()
     {
         Assert.Equal(PerformancePreset.WorkExtendedDisplay, new AppSettings().Preset);
-        Assert.Equal((1728, 1117), (WorkPreset.Width, WorkPreset.Height));
+        Assert.Equal((1512, 982), (WorkPreset.Width, WorkPreset.Height));
     }
 
     [Fact]

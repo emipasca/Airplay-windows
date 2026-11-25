@@ -74,7 +74,7 @@ public class ArgumentBuilder : IArgumentBuilder
 
             case PerformancePreset.WorkExtendedDisplay:
             {
-                // MacBook as extended desktop at the MacBook Pro 16" size (optionally 2x "Retina"
+                // MacBook as extended desktop at the MacBook Pro 14" size (optionally 2x "Retina"
                 // so the Mac encodes twice the detail), 60 fps, H.265 + D3D12 GPU decode/render
                 // with no cross-API copies. Audio is forced off below (sound stays on the Mac).
                 var (w, h) = settings.WorkRetina
@@ -84,8 +84,8 @@ public class ArgumentBuilder : IArgumentBuilder
                 args.Add($"{w}x{h}@{WorkPreset.Fps}");
                 if (settings.WorkRetina)
                 {
-                    // Describe a Retina panel (Airplay-windows engine options): 1728x1117 points,
-                    // 3456x2234 pixels, MacBook Pro 16" physical size.
+                    // Describe a Retina panel (Airplay-windows engine options): 1512x982 points,
+                    // 3024x1964 pixels, MacBook Pro 14" physical size.
                     args.Add("-hidpi");
                     args.Add("-physical");
                     args.Add($"{WorkPreset.RetinaPhysicalWidthMm}x{WorkPreset.RetinaPhysicalHeightMm}");
