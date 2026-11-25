@@ -73,21 +73,68 @@ public class ArgumentBuilder : IArgumentBuilder
                 break;
 
             case PerformancePreset.WorkExtendedDisplay:
-                // MacBook as extended desktop: 16:10 at 1440p (1:1 on a 1440p monitor), 60 fps,
-                // H.265 + D3D12 GPU decode/render with no cross-API copies, video shown without
-                // waiting on audio sync. Audio is forced off below (sound stays on the Mac).
+            {
+                // MacBook as extended desktop at the MacBook Pro 16" size (optionally 2x "Retina"
+                // so the Mac encodes twice the detail), 60 fps, H.265 + D3D12 GPU decode/render
+                // with no cross-API copies. Audio is forced off below (sound stays on the Mac).
+                var (w, h) = settings.WorkRetina
+                    ? (WorkPreset.RetinaWidth, WorkPreset.RetinaHeight)
+                    : (WorkPreset.Width, WorkPreset.Height);
                 args.Add("-s");
-                args.Add($"{WorkPreset.Width}x{WorkPreset.Height}@{WorkPreset.Fps}");
+                args.Add($"{w}x{h}@{WorkPreset.Fps}");
+                if (settings.WorkRetina)
+                {
+                    // Describe a Retina panel (Airplay-windows engine options): 1728x1117 points,
+                    // 3456x2234 pixels, MacBook Pro 16" physical size.
+                    args.Add("-hidpi");
+                    args.Add("-physical");
+                    args.Add($"{WorkPreset.RetinaPhysicalWidthMm}x{WorkPreset.RetinaPhysicalHeightMm}");
+                }
+                // Quality test knobs: frame-rate cap (30 or 60) and codec (H.265 or H.264).
+                var maxFps = settings.WorkMaxFps <= 30 ? 30 : WorkPreset.Fps;
                 args.Add("-fps");
-                args.Add($"{WorkPreset.Fps}");
-                args.Add("-h265");
+                args.Add($"{maxFps}");
+                if (settings.WorkUseH265)
+                {
+                    args.Add("-h265");
+                }
                 args.Add("-vd");
-                args.Add(WorkPreset.Decoder);
-                args.Add("-vs");
-                args.Add(WorkPreset.VideoSink);
-                args.Add("-vsync");
-                args.Add("no");
+                args.Add(WorkPreset.Decoder);   // engine swaps to the H.265 decoder for HEVC streams
+
+                var bufferMs = Math.Clamp(settings.WorkSmoothingBufferMs, 0, WorkPreset.MaxSmoothingBufferMs);
+                if (settings.WorkSmoothingAuto)
+                {
+                    // Engine measures frame lateness and sizes the buffer itself (Airplay-windows option).
+                    args.Add("-vs");
+                    args.Add(WorkPreset.VideoSink);
+                    args.Add("-vlatency");
+                    args.Add("auto");
+                    args.Add("-vadapt");
+                    AddLiveLatencyControl(args, settings);
+                }
+                else if (bufferMs > 0)
+                {
+                    // Jitter buffer: keep timestamp sync on (frames paced by the client's clock) and
+                    // pin the pipeline latency to decode time + buffer, so each frame is shown a fixed
+                    // (decode + buffer) after its schedule. "-vlatency" is an Airplay-windows engine option.
+                    args.Add("-vs");
+                    args.Add(WorkPreset.VideoSink);
+                    args.Add("-vlatency");
+                    args.Add($"{WorkPreset.DecodeAllowanceMs + bufferMs}");
+                    // Pace on the fastest recent frame, not on the (often very late) first frame.
+                    args.Add("-vadapt");
+                    AddLiveLatencyControl(args, settings);
+                }
+                else
+                {
+                    // Show frames the moment they arrive: lowest latency, jitter passes through.
+                    args.Add("-vs");
+                    args.Add(WorkPreset.VideoSink);
+                    args.Add("-vsync");
+                    args.Add("no");
+                }
                 break;
+            }
 
             case PerformancePreset.Custom:
                 args.Add("-s");
@@ -198,6 +245,31 @@ public class ArgumentBuilder : IArgumentBuilder
 
         return args.AsReadOnly();
     }
+
+    /// <summary>Work preset: let the app switch latency modes live over the engine's stdin
+    /// (-vcontrol), and start with the saved mode's fixed buffer (-vbuffer) for Fast/Balanced.</summary>
+    private static void AddLiveLatencyControl(List<string> args, AppSettings settings)
+    {
+        args.Add("-vcontrol");
+        var buffer = BufferForMode(settings.WorkLatencyMode);
+        if (buffer is int ms)
+        {
+            args.Add("-vbuffer");
+            args.Add(ms.ToString());
+        }
+    }
+
+    /// <summary>Fixed buffer for a latency mode, or null for Smooth (automatic).</summary>
+    public static int? BufferForMode(WorkLatencyMode mode) => mode switch
+    {
+        WorkLatencyMode.Fast => WorkPreset.FastBufferMs,
+        WorkLatencyMode.Balanced => WorkPreset.BalancedBufferMs,
+        _ => null
+    };
+
+    /// <summary>Engine control line that switches a running engine to a latency mode.</summary>
+    public static string CommandForMode(WorkLatencyMode mode) =>
+        BufferForMode(mode) is int ms ? $"buffer {ms}" : "mode smooth";
 
     public string BuildCommandLineString(AppSettings settings, string? bleStatusPath = null)
     {

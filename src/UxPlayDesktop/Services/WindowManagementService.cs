@@ -58,6 +58,10 @@ public interface IWindowManagementService
     void SetAlwaysOnTop(bool enable, IntPtr? targetHwnd = null);
     string? CaptureScreenshot(string? outputDirectory = null);
     void MoveVideoWindowToDisplay(int displayIndex, bool forceFullscreen = false);
+
+    /// <summary>Sizes the video window so its picture area is exactly width x height (one stream
+    /// pixel per screen pixel, no scaling blur), optionally without borders, centered on the display.</summary>
+    void FitVideoWindowPixelPerfect(int displayIndex, int width, int height, bool borderless);
 }
 
 public class WindowManagementService : IWindowManagementService
@@ -135,6 +139,26 @@ public class WindowManagementService : IWindowManagementService
 
     [DllImport("user32.dll")]
     private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    private static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+    private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    [DllImport("user32.dll")]
+    private static extern bool AdjustWindowRectEx(ref RECT lpRect, uint dwStyle, bool bMenu, uint dwExStyle);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
+
+    private const int GWL_STYLE = -16;
+    private const int GWL_EXSTYLE = -20;
+    private const long WS_CAPTION = 0x00C00000L, WS_THICKFRAME = 0x00040000L, WS_SYSMENU = 0x00080000L,
+                       WS_MINIMIZEBOX = 0x00020000L, WS_MAXIMIZEBOX = 0x00010000L, WS_POPUP = 0x80000000L;
+    private const long WS_EX_DLGMODALFRAME = 0x00000001L, WS_EX_CLIENTEDGE = 0x00000200L,
+                       WS_EX_STATICEDGE = 0x00020000L, WS_EX_WINDOWEDGE = 0x00000100L;
+    private const uint SWP_NOACTIVATE = 0x0010;
 
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
@@ -276,6 +300,42 @@ public class WindowManagementService : IWindowManagementService
                 SetWindowPos(hwnd, IntPtr.Zero, targetX, targetY, 0, 0, SWP_NOSIZE | SWP_SHOWWINDOW | SWP_FRAMECHANGED);
             }
         }
+    }
+
+    public void FitVideoWindowPixelPerfect(int displayIndex, int width, int height, bool borderless)
+    {
+        if (width <= 0 || height <= 0) return;
+        IntPtr hwnd = FindAirPlayVideoHwnd();
+        if (hwnd == IntPtr.Zero) return;
+        if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
+
+        var displays = GetConnectedDisplays();
+        if (displays.Count == 0) return;
+        var target = displays.FirstOrDefault(d => d.Index == displayIndex) ?? displays[0];
+
+        long style = GetWindowLongPtr(hwnd, GWL_STYLE).ToInt64();
+        long exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
+        if (borderless)
+        {
+            style = (style & ~(WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX)) | WS_POPUP;
+            exStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE | WS_EX_WINDOWEDGE);
+            SetWindowLongPtr(hwnd, GWL_STYLE, new IntPtr(style));
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(exStyle));
+        }
+
+        // Outer window size whose client (picture) area is exactly width x height.
+        var rect = new RECT { Left = 0, Top = 0, Right = width, Bottom = height };
+        AdjustWindowRectEx(ref rect, unchecked((uint)style), false, unchecked((uint)exStyle));
+        int outerW = rect.Right - rect.Left;
+        int outerH = rect.Bottom - rect.Top;
+
+        // Center the picture area in the monitor's work area (taskbar excluded).
+        int workW = target.WorkRight - target.WorkLeft;
+        int workH = target.WorkBottom - target.WorkTop;
+        int x = target.WorkLeft + (workW - width) / 2 + rect.Left;
+        int y = target.WorkTop + Math.Max(0, (workH - height) / 2) + rect.Top;
+
+        SetWindowPos(hwnd, IntPtr.Zero, x, y, outerW, outerH, SWP_SHOWWINDOW | SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE);
     }
 
     public string? CaptureScreenshot(string? outputDirectory = null)

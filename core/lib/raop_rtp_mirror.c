@@ -206,7 +206,9 @@ raop_rtp_mirror_thread(void *arg)
     uint32_t metrics_keyframes = 0;
     uint32_t metrics_latency_count = 0;
     double metrics_latency_sum_ms = 0.0;
-    double metrics_latency_max_ms = 0.0;
+    double metrics_latency_max_ms = -1.0e9;
+    double metrics_latency_min_ms = 1.0e9;
+    int64_t metrics_anchor_offset = 0;
 
     while (1) {
         fd_set rfds;
@@ -565,13 +567,29 @@ raop_rtp_mirror_thread(void *arg)
                     metrics_frames++;
                     metrics_bytes += (uint64_t) payload_size;
                     if (packet[5] == 0x10) metrics_keyframes++;   /* IDR frame */
-                    if (ntp_timestamp_local) {
-                        /* client frame timestamp (NTP-synced) -> arrival here: encode + network delay */
-                        double latency_ms = (double) ((int64_t) metrics_now - (int64_t) ntp_timestamp_local) / 1.0e6;
+                    /* Per-frame delivery delay. With NTP clock sync this is absolute (client frame time ->
+                     * arrival here: encode + network). Without it (e.g. video-only sessions, where the
+                     * client never syncs NTP) it is relative to the fastest recent frame (a running
+                     * minimum that forgets 0.2 ms per frame), the same schedule the renderer paces on
+                     * with -vadapt: it is how late each frame is versus that schedule, i.e. what the
+                     * smoothing buffer has to absorb. */
+                    {
+                        int64_t arrival_offset = (int64_t) metrics_now - (int64_t) ntp_timestamp_remote;
+                        if (!metrics_anchor_offset || arrival_offset < metrics_anchor_offset + 200000) {
+                            metrics_anchor_offset = arrival_offset;
+                        } else {
+                            metrics_anchor_offset += 200000;
+                        }
+                    }
+                    uint64_t metrics_expected = ntp_timestamp_local ? ntp_timestamp_local
+                                                : (uint64_t) ((int64_t) ntp_timestamp_remote + metrics_anchor_offset);
+                    {
+                        double latency_ms = (double) ((int64_t) metrics_now - (int64_t) metrics_expected) / 1.0e6;
                         if (latency_ms > -1000.0 && latency_ms < 10000.0) {
                             metrics_latency_sum_ms += latency_ms;
                             metrics_latency_count++;
                             if (latency_ms > metrics_latency_max_ms) metrics_latency_max_ms = latency_ms;
+                            if (latency_ms < metrics_latency_min_ms) metrics_latency_min_ms = latency_ms;
                         }
                     }
                     if (!metrics_window_start) metrics_window_start = metrics_now;
@@ -579,18 +597,21 @@ raop_rtp_mirror_thread(void *arg)
                     if (metrics_elapsed >= SECOND_IN_NSECS) {
                         double secs = (double) metrics_elapsed / (double) SECOND_IN_NSECS;
                         logger_log(raop_rtp_mirror->logger, LOGGER_INFO,
-                                   "METRICS stream fps=%.1f kbps=%.0f keyframes=%u net_latency_ms=%.1f net_latency_max_ms=%.1f codec=%s",
+                                   "METRICS stream fps=%.1f kbps=%.0f keyframes=%u net_latency_ms=%.1f net_latency_max_ms=%.1f net_latency_min_ms=%.1f codec=%s latency_ref=%s",
                                    (double) metrics_frames / secs, (double) metrics_bytes * 8.0 / secs / 1000.0, metrics_keyframes,
                                    metrics_latency_count ? metrics_latency_sum_ms / metrics_latency_count : -1.0,
                                    metrics_latency_count ? metrics_latency_max_ms : -1.0,
-                                   h265_video ? h265 : h264);
+                                   metrics_latency_count ? metrics_latency_min_ms : -1.0,
+                                   h265_video ? h265 : h264,
+                                   metrics_latency_count ? (ntp_timestamp_local ? "abs" : "rel") : "none");
                         metrics_window_start = metrics_now;
                         metrics_bytes = 0;
                         metrics_frames = 0;
                         metrics_keyframes = 0;
                         metrics_latency_count = 0;
                         metrics_latency_sum_ms = 0.0;
-                        metrics_latency_max_ms = 0.0;
+                        metrics_latency_max_ms = -1.0e9;
+                        metrics_latency_min_ms = 1.0e9;
                     }
                 }
                 break;

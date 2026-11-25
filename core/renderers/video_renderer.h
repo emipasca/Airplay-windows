@@ -60,6 +60,18 @@ void video_renderer_init (logger_t *logger, const char *server_name, videoflip_t
                           const char *decoder, const char *converter, const char *videosink, const char *videosink_options,
                           bool initial_fullscreen, bool video_sync, bool h265_support, bool coverart_support,
                           guint playbin_version,  const char *uri);
+/* Airplay-windows: fix the video pipeline latency (ms) instead of using the queried worst case;
+ * call before video_renderer_init. Negative = use the queried latency (default). */
+void video_renderer_set_latency_ms (int ms);
+/* Airplay-windows: size the pipeline latency automatically from measured frame lateness:
+ * decode_ms allowance + adaptive buffer, starting from initial_buffer_ms. */
+void video_renderer_set_auto_latency (int decode_ms, int initial_buffer_ms);
+/* Airplay-windows: live Fast (minimal buffer) / Smooth (automatic buffer) switch; thread-safe. */
+void video_renderer_request_fast_mode (bool fast);
+void video_renderer_set_initial_fast_mode (void);
+/* ms >= 0: fixed buffer of ms (e.g. Fast 12, Balanced 35); ms < 0: Smooth (automatic) */
+void video_renderer_request_buffer_ms (int ms);
+void video_renderer_set_initial_buffer_ms (int ms);
 void video_renderer_start ();
 void video_renderer_stop ();
 void video_renderer_set_device_model(const char *model, const char *name);

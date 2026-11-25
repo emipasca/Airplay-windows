@@ -23,6 +23,67 @@ public class LiveMetricsTests
     }
 
     [Fact]
+    public void Parser_ComputesJitterFromMinAndMax()
+    {
+        Assert.True(StreamMetricsParser.TryParseStream(
+            "METRICS stream fps=60.0 kbps=20000 keyframes=0 net_latency_ms=22.0 net_latency_max_ms=48.5 net_latency_min_ms=12.5 codec=h265", out var s));
+        Assert.Equal(12.5, s.NetLatencyMinMs!.Value, 3);
+        Assert.Equal(36.0, s.JitterMs!.Value, 3);
+
+        // older engine without min -> jitter unknown
+        Assert.True(StreamMetricsParser.TryParseStream(StreamLine, out var old));
+        Assert.Null(old.JitterMs);
+    }
+
+    [Fact]
+    public void Parser_RelativeLatency_KeepsNegativeValues_AndEstimateExcludesNetwork()
+    {
+        const string rel = "METRICS stream fps=60.0 kbps=8000 keyframes=0 net_latency_ms=1.5 net_latency_max_ms=14.0 net_latency_min_ms=-6.0 codec=h265 latency_ref=rel";
+        Assert.True(StreamMetricsParser.TryParseStream(rel, out var s));
+        Assert.Equal(LatencyReference.Relative, s.LatencyRef);
+        Assert.Equal(-6.0, s.NetLatencyMinMs!.Value, 3);
+        Assert.Equal(20.0, s.JitterMs!.Value, 3);
+
+        var vm = new LiveMetricsViewModel();
+        var t0 = new DateTime(2026, 1, 1, 12, 0, 0);
+        vm.ApplyLine("METRICS render rendered=10 dropped=0 pipeline_latency_ms=35.0", t0);
+        vm.ApplyLine(rel, t0);
+        Assert.True(vm.IsRelativeLatency);
+        Assert.Equal("+14 ms", vm.NetLatencyText);
+        Assert.Equal(35.0 + 1000.0 / 60.0, vm.EstimatedTotalLatencyMs!.Value, 2);
+
+        Assert.True(StreamMetricsParser.TryParseStream(
+            "METRICS stream fps=0.5 kbps=10 keyframes=0 net_latency_ms=-1.0 net_latency_max_ms=-1.0 net_latency_min_ms=-1.0 codec=h265 latency_ref=none", out var none));
+        Assert.Null(none.NetLatencyMs);
+        Assert.Null(none.JitterMs);
+    }
+
+    [Fact]
+    public void CsvLog_WritesHeaderAndOneRowPerSample()
+    {
+        var dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "airplay-metrics-test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var log = new UxPlayDesktop.Services.MetricsCsvLog(dir);
+            var vm = new LiveMetricsViewModel();
+            var t0 = new DateTime(2026, 1, 1, 12, 0, 0);
+            log.StartSession(t0);
+            vm.ApplyLine("METRICS stream fps=60.0 kbps=20000 keyframes=0 net_latency_ms=22.0 net_latency_max_ms=48.5 net_latency_min_ms=12.5 codec=h265", t0);
+            log.Append(vm, t0);
+            log.EndSession();
+
+            var lines = System.IO.File.ReadAllLines(log.CurrentPath!);
+            Assert.Equal(2, lines.Length);
+            Assert.StartsWith("time,fps,mbps", lines[0]);
+            Assert.StartsWith("12:00:00,60.0,20.0,22.0,12.5,48.5,36.0,", lines[1]);
+        }
+        finally
+        {
+            if (System.IO.Directory.Exists(dir)) System.IO.Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
     public void Parser_TreatsMinusOneAsUnavailable()
     {
         Assert.True(StreamMetricsParser.TryParseStream(

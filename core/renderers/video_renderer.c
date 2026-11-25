@@ -195,6 +195,159 @@ static const char jpeg_caps[]="image/jpeg";
 static const char h264_caps[]="video/x-h264,stream-format=(string)byte-stream,alignment=(string)au";
 static const char h265_caps[]="video/x-h265,stream-format=(string)byte-stream,alignment=(string)au";
 
+/* Airplay-windows: optional fixed pipeline latency. With timestamp sync on, the sink shows each
+ * frame at PTS + pipeline latency + ts-offset. The queried latency is the decoder's worst case plus
+ * the sink's 20 ms processing deadline (~55 ms for H.265 on D3D12); a GPU decode takes a few ms,
+ * so pinning it lets the smoothing buffer be the only deliberate delay. */
+static GstClockTime fixed_pipeline_latency = GST_CLOCK_TIME_NONE;
+
+void video_renderer_set_latency_ms(int ms) {
+    fixed_pipeline_latency = (ms >= 0) ? (GstClockTime) ms * GST_MSECOND : GST_CLOCK_TIME_NONE;
+}
+
+/* Airplay-windows: automatic smoothing buffer (-vlatency auto).
+ * Each frame's lateness versus the pacing schedule is measured as it enters the pipeline.
+ * Every AUTO_WINDOW the pipeline latency is set to decode allowance + the recent worst lateness
+ * (ignoring the single worst frame of each window) + a small margin: growing quickly when frames
+ * run late, shrinking slowly when delivery is steady. The change is applied with
+ * gst_element_call_async because it triggers a latency query that must not block this thread. */
+#define AUTO_WINDOW_US        (2 * G_USEC_PER_SEC)
+#define AUTO_HISTORY          5                       /* windows considered: ~10 s */
+#define AUTO_MARGIN           (5 * GST_MSECOND)
+#define AUTO_MIN_BUFFER       (5 * GST_MSECOND)
+#define AUTO_MAX_BUFFER       (150 * GST_MSECOND)
+#define AUTO_MAX_STEP_UP      (20 * GST_MSECOND)
+#define AUTO_MAX_STEP_DOWN    (3 * GST_MSECOND)
+
+static gboolean auto_latency = FALSE;
+static GstClockTime auto_decode_allowance = 10 * GST_MSECOND;
+static gint64 auto_window_start_us = 0;
+static GstClockTimeDiff auto_window_top1 = 0, auto_window_top2 = 0;
+static guint auto_window_frames = 0;
+static GstClockTimeDiff auto_history[AUTO_HISTORY] = {0};
+static guint auto_history_count = 0, auto_history_next = 0;
+
+void video_renderer_set_auto_latency(int decode_ms, int initial_buffer_ms) {
+    auto_latency = TRUE;
+    auto_decode_allowance = (GstClockTime) decode_ms * GST_MSECOND;
+    fixed_pipeline_latency = auto_decode_allowance + (GstClockTime) initial_buffer_ms * GST_MSECOND;
+}
+
+static void apply_latency_async(GstElement *pipeline, gpointer data) {
+    gst_pipeline_set_latency(GST_PIPELINE(pipeline), *(GstClockTime *) data);
+}
+
+static void set_pipeline_latency_async(GstElement *pipeline, GstClockTime latency) {
+    GstClockTime *value = g_new(GstClockTime, 1);
+    *value = latency;
+    gst_element_call_async(pipeline, apply_latency_async, value, g_free);
+}
+
+/* Airplay-windows: live latency mode switch.
+ * Fixed buffer (e.g. Fast = 12 ms, Balanced = 35 ms): pipeline latency = decode allowance + buffer;
+ * frames later than that are dropped by the sink, so a network stall shows as a brief freeze
+ * instead of adding delay to every frame.
+ * Smooth = the automatic buffer above, resumed from where it was.
+ * Requests may come from any thread; they are applied on the next video frame. */
+#define REQ_NONE   (-1)
+#define REQ_SMOOTH (-2)
+static gint requested_buffer_ms = REQ_NONE;
+static gboolean buffer_override = FALSE;       /* TRUE while a fixed buffer replaces Smooth */
+static GstClockTime smooth_latency_saved = GST_CLOCK_TIME_NONE;
+
+/* ms >= 0: switch to a fixed buffer of ms; ms < 0: back to Smooth (automatic) */
+void video_renderer_request_buffer_ms(int ms) {
+    g_atomic_int_set(&requested_buffer_ms, ms < 0 ? REQ_SMOOTH : MIN(ms, 1000));
+}
+
+void video_renderer_request_fast_mode(bool fast) {
+    video_renderer_request_buffer_ms(fast ? 12 : -1);
+}
+
+/* select a fixed buffer before the pipeline is built (startup option) */
+void video_renderer_set_initial_buffer_ms(int ms) {
+    if (!buffer_override) smooth_latency_saved = fixed_pipeline_latency;
+    buffer_override = TRUE;
+    fixed_pipeline_latency = auto_decode_allowance + (GstClockTime) ms * GST_MSECOND;
+}
+
+void video_renderer_set_initial_fast_mode(void) {
+    video_renderer_set_initial_buffer_ms(12);
+}
+
+static void apply_requested_mode(GstElement *pipeline) {
+    gint req = g_atomic_int_get(&requested_buffer_ms);
+    if (req == REQ_NONE || !g_atomic_int_compare_and_exchange(&requested_buffer_ms, req, REQ_NONE)) return;
+
+    if (req == REQ_SMOOTH) {
+        if (!buffer_override) return;
+        fixed_pipeline_latency = GST_CLOCK_TIME_IS_VALID(smooth_latency_saved)
+            ? smooth_latency_saved : auto_decode_allowance + 60 * GST_MSECOND;
+        buffer_override = FALSE;
+        /* restart the automatic measurement window */
+        auto_window_start_us = 0;
+        auto_window_top1 = auto_window_top2 = 0;
+        auto_window_frames = 0;
+    } else {
+        GstClockTime target = auto_decode_allowance + (GstClockTime) req * GST_MSECOND;
+        if (!buffer_override) smooth_latency_saved = fixed_pipeline_latency;
+        buffer_override = TRUE;
+        if (target == fixed_pipeline_latency) return;
+        fixed_pipeline_latency = target;
+    }
+    set_pipeline_latency_async(pipeline, fixed_pipeline_latency);
+    if (buffer_override) {
+        logger_log(logger, LOGGER_INFO, "latency mode: fixed buffer %d ms (%.0f ms)", req,
+                   (double) fixed_pipeline_latency / GST_MSECOND);
+    } else {
+        logger_log(logger, LOGGER_INFO, "latency mode: smooth (%.0f ms)", (double) fixed_pipeline_latency / GST_MSECOND);
+    }
+}
+
+static void auto_latency_update(GstElement *pipeline, GstClockTimeDiff lateness) {
+    if (lateness > auto_window_top1) {
+        auto_window_top2 = auto_window_top1;
+        auto_window_top1 = lateness;
+    } else if (lateness > auto_window_top2) {
+        auto_window_top2 = lateness;
+    }
+    auto_window_frames++;
+
+    gint64 now_us = g_get_monotonic_time();
+    if (!auto_window_start_us) auto_window_start_us = now_us;
+    if (now_us - auto_window_start_us < AUTO_WINDOW_US) return;
+
+    /* worst frame of the window except one outlier (if the window had enough frames) */
+    auto_history[auto_history_next] = (auto_window_frames > 10) ? auto_window_top2 : auto_window_top1;
+    auto_history_next = (auto_history_next + 1) % AUTO_HISTORY;
+    if (auto_history_count < AUTO_HISTORY) auto_history_count++;
+    auto_window_start_us = now_us;
+    auto_window_top1 = auto_window_top2 = 0;
+    auto_window_frames = 0;
+
+    GstClockTimeDiff worst = 0;
+    for (guint i = 0; i < auto_history_count; i++) {
+        if (auto_history[i] > worst) worst = auto_history[i];
+    }
+    GstClockTime buffer = (GstClockTime) worst + AUTO_MARGIN;
+    if (buffer < AUTO_MIN_BUFFER) buffer = AUTO_MIN_BUFFER;
+    if (buffer > AUTO_MAX_BUFFER) buffer = AUTO_MAX_BUFFER;
+    GstClockTime desired = auto_decode_allowance + buffer;
+    GstClockTime current = fixed_pipeline_latency;
+    GstClockTime next = current;
+    if (desired > current) {
+        next = current + MIN(desired - current, AUTO_MAX_STEP_UP);
+    } else if (current > desired) {
+        next = current - MIN(current - desired, AUTO_MAX_STEP_DOWN);
+    }
+    if (next == current || (next > current ? next - current : current - next) < GST_MSECOND) return;
+
+    fixed_pipeline_latency = next;
+    set_pipeline_latency_async(pipeline, next);
+    logger_log(logger, LOGGER_INFO, "auto latency: %.0f ms (recent worst lateness %.0f ms)",
+               (double) next / GST_MSECOND, (double) worst / GST_MSECOND);
+}
+
 /* Airplay-windows: once per second, log video-sink frame counters and pipeline latency
  * ("METRICS render ..."), parsed by the desktop app. rendered/dropped are cumulative. */
 static void log_render_metrics(video_renderer_t *r) {
@@ -221,18 +374,33 @@ static void log_render_metrics(video_renderer_t *r) {
     g_value_unset(&item);
     gst_iterator_free(it);
 
-    double pipeline_latency_ms = -1.0;
-    GstQuery *query = gst_query_new_latency();
-    if (gst_element_query(r->pipeline, query)) {
-        gboolean live = FALSE;
-        GstClockTime min_latency = 0, max_latency = 0;
-        gst_query_parse_latency(query, &live, &min_latency, &max_latency);
-        if (GST_CLOCK_TIME_IS_VALID(min_latency)) pipeline_latency_ms = (double) min_latency / 1.0e6;
+    /* This runs on the thread that receives video from the client, so it must stay cheap.
+     * A latency query walks the whole pipeline and can block on the D3D decoder/sink for tens
+     * of ms; it is only informational (the value changes only when the pipeline is rebuilt),
+     * so run it at most every 30 s, and never when a fixed latency is configured. */
+    static double queried_latency_ms = -1.0;
+    static gint64 last_query_us = 0;
+    gint64 query_cost_us = 0;
+    if (!GST_CLOCK_TIME_IS_VALID(fixed_pipeline_latency) &&
+        (!last_query_us || now_us - last_query_us >= 30 * G_USEC_PER_SEC)) {
+        last_query_us = now_us;
+        GstQuery *query = gst_query_new_latency();
+        if (gst_element_query(r->pipeline, query)) {
+            gboolean live = FALSE;
+            GstClockTime min_latency = 0, max_latency = 0;
+            gst_query_parse_latency(query, &live, &min_latency, &max_latency);
+            if (GST_CLOCK_TIME_IS_VALID(min_latency)) queried_latency_ms = (double) min_latency / 1.0e6;
+        }
+        gst_query_unref(query);
+        query_cost_us = g_get_monotonic_time() - now_us;
     }
-    gst_query_unref(query);
 
+    double pipeline_latency_ms = GST_CLOCK_TIME_IS_VALID(fixed_pipeline_latency)
+        ? (double) fixed_pipeline_latency / 1.0e6 : queried_latency_ms;
+    double cost_ms = (double) (g_get_monotonic_time() - now_us) / 1000.0;
     logger_log(logger, LOGGER_INFO, "METRICS render rendered=%" G_GUINT64_FORMAT " dropped=%" G_GUINT64_FORMAT
-               " pipeline_latency_ms=%.1f", rendered, dropped, pipeline_latency_ms);
+               " pipeline_latency_ms=%.1f queried_latency_ms=%.1f metrics_cost_ms=%.2f query_cost_ms=%.2f",
+               rendered, dropped, pipeline_latency_ms, queried_latency_ms, cost_ms, (double) query_cost_us / 1000.0);
 }
 
 GstElement *make_video_sink(const char *videosink, const char *videosink_options) {
@@ -482,6 +650,11 @@ void video_renderer_init(logger_t *render_logger, const char *server_name, video
             gst_pipeline_use_clock(GST_PIPELINE_CAST(renderer_type[i]->pipeline), clock);
             renderer_type[i]->appsrc = gst_bin_get_by_name (GST_BIN (renderer_type[i]->pipeline), "video_source");
             g_assert(renderer_type[i]->appsrc);
+            if (GST_CLOCK_TIME_IS_VALID(fixed_pipeline_latency) && GST_IS_PIPELINE(renderer_type[i]->pipeline)) {
+                gst_pipeline_set_latency(GST_PIPELINE(renderer_type[i]->pipeline), fixed_pipeline_latency);
+                logger_log(logger, LOGGER_INFO, "video pipeline %d: fixed latency %.1f ms", i + 1,
+                           (double) fixed_pipeline_latency / GST_MSECOND);
+            }
             g_object_set(renderer_type[i]->appsrc, "caps", caps, "stream-type", 0, "is-live", TRUE, "format", GST_FORMAT_TIME, NULL);
             g_string_free(launch, TRUE);
             gst_caps_unref(caps);
@@ -703,6 +876,18 @@ uint64_t video_renderer_render_buffer(unsigned char* data, int *data_len, int *n
         }
         gst_buffer_fill(buffer, 0, data, *data_len);
         gst_app_src_push_buffer (GST_APP_SRC(renderer->appsrc), buffer);
+        if (sync && renderer->pipeline) {
+            apply_requested_mode(renderer->pipeline);
+        }
+        if (auto_latency && !buffer_override && sync && renderer->pipeline) {
+            GstClock *clock = gst_element_get_clock(renderer->pipeline);
+            if (clock) {
+                /* running time now minus this frame's PTS: how late it entered the pipeline */
+                GstClockTimeDiff lateness = GST_CLOCK_DIFF(pts, gst_clock_get_time(clock) - gst_video_pipeline_base_time);
+                gst_object_unref(clock);
+                auto_latency_update(renderer->pipeline, lateness);
+            }
+        }
         log_render_metrics(renderer);
 #ifdef X_DISPLAY_FIX
         if (renderer->gst_window && !(renderer->gst_window->window) && renderer->use_x11) {

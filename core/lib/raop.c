@@ -71,6 +71,13 @@ struct raop_s {
     uint8_t maxFPS;
     uint8_t overscanned;
     uint8_t clientFPSdata;
+    /* Airplay-windows: describe the display like a Retina panel. width/height above are the
+     * pixel size; points (0 = same as pixels) and physical size in mm (0 = unknown) are
+     * reported separately so the client can recognise a high-density (HiDPI) display. */
+    uint16_t width_points;
+    uint16_t height_points;
+    uint16_t width_mm;
+    uint16_t height_mm;
 
     int audio_delay_micros;
 
@@ -622,6 +629,10 @@ raop_init(raop_callbacks_t *callbacks) {
     raop->refreshRate = 60;
     raop->maxFPS = 30;
     raop->overscanned = 0;
+    raop->width_points = 0;
+    raop->height_points = 0;
+    raop->width_mm = 0;
+    raop->height_mm = 0;
 
     /* initialise stored pin */
     raop->pin = 0;
@@ -753,6 +764,18 @@ int raop_set_plist(raop_t *raop, const char *plist_item, const int value) {
     } else if (strcmp(plist_item, "overscanned") == 0) {
         raop->overscanned = (uint8_t) (value ? 1 : 0);
         if ((int) raop->overscanned  != value) retval = 1;
+    } else if (strcmp(plist_item, "widthPoints") == 0) {
+        raop->width_points = (uint16_t) value;
+        if ((int) raop->width_points != value) retval = 1;
+    } else if (strcmp(plist_item, "heightPoints") == 0) {
+        raop->height_points = (uint16_t) value;
+        if ((int) raop->height_points != value) retval = 1;
+    } else if (strcmp(plist_item, "widthPhysical") == 0) {
+        raop->width_mm = (uint16_t) value;
+        if ((int) raop->width_mm != value) retval = 1;
+    } else if (strcmp(plist_item, "heightPhysical") == 0) {
+        raop->height_mm = (uint16_t) value;
+        if ((int) raop->height_mm != value) retval = 1;
     } else if (strcmp(plist_item, "clientFPSdata") == 0) {
         raop->clientFPSdata = (value ? 1 : 0);
         if ((int) raop->clientFPSdata  != value) retval = 1;

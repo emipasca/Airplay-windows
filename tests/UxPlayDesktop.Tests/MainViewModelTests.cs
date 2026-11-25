@@ -23,6 +23,13 @@ public class MockProcessManager : ICoreProcessManager
 
     public void TriggerMetrics(string line) => MetricsLineReceived?.Invoke(line);
 
+    public System.Collections.Generic.List<string> SentCommands { get; } = new();
+    public bool SendEngineCommand(string command)
+    {
+        SentCommands.Add(command);
+        return IsRunning;
+    }
+
     public Task<bool> StartAsync(AppSettings settings, CancellationToken cancellationToken = default)
     {
         IsRunning = true;
@@ -83,6 +90,13 @@ public class MockWindowManagementService : IWindowManagementService
     public IReadOnlyList<DisplayInfo> GetConnectedDisplays() => Displays.AsReadOnly();
     public void SetAlwaysOnTop(bool enable, IntPtr? targetHwnd = null) => LastAlwaysOnTop = enable;
     public string? CaptureScreenshot(string? outputDirectory = null) => null;
+    public (int Width, int Height, bool Borderless)? LastPixelPerfect { get; private set; }
+    public void FitVideoWindowPixelPerfect(int displayIndex, int width, int height, bool borderless)
+    {
+        LastMovedDisplayIndex = displayIndex;
+        LastForceFullscreen = false;
+        LastPixelPerfect = (width, height, borderless);
+    }
     public void MoveVideoWindowToDisplay(int displayIndex, bool forceFullscreen = false)
     {
         LastMovedDisplayIndex = displayIndex;
@@ -140,6 +154,61 @@ public class MainViewModelTests
         _processManager = new MockProcessManager();
         _bonjourService = new MockBonjourService();
         _autostartService = new MockAutostartService();
+    }
+
+    [Theory]
+    [InlineData("1728x1117", true, 1728, 1117)]
+    [InlineData("3456X2234", true, 3456, 2234)]
+    [InlineData("", false, 0, 0)]
+    [InlineData("abc", false, 0, 0)]
+    [InlineData("0x100", false, 0, 100)]
+    public void TryParseResolution_ParsesWidthAndHeight(string text, bool ok, int w, int h)
+    {
+        Assert.Equal(ok, MainViewModel.TryParseResolution(text, out var pw, out var ph));
+        if (ok) Assert.Equal((w, h), (pw, ph));
+    }
+
+    [Fact]
+    public void WorkPreset_PlacesVideoPixelPerfect_UnlessFullscreen()
+    {
+        _settingsService.CurrentSettings.AutoStartServer = false;
+        _settingsService.CurrentSettings.Preset = PerformancePreset.WorkExtendedDisplay;
+        var windows = new MockWindowManagementService();
+        var vm = new MainViewModel(_settingsService, _processManager, _bonjourService, _autostartService, windowService: windows);
+
+        _processManager.CurrentSession.ActiveResolution = "1728x1117";
+        _processManager.TriggerState(ServerState.Streaming);
+        _processManager.TriggerSessionUpdated(_processManager.CurrentSession);
+        Assert.Equal((1728, 1117, true), windows.LastPixelPerfect);
+
+        _settingsService.CurrentSettings.ForceFullscreen = true;
+        _processManager.TriggerSessionUpdated(_processManager.CurrentSession);
+        Assert.True(windows.LastForceFullscreen);   // fullscreen still scales to fill
+    }
+
+    [Fact]
+    public void CycleLatencyMode_SendsLiveCommand_AndSaves()
+    {
+        _settingsService.CurrentSettings.AutoStartServer = false;
+        _settingsService.CurrentSettings.Preset = PerformancePreset.WorkExtendedDisplay;
+        _settingsService.CurrentSettings.WorkLatencyMode = WorkLatencyMode.Smooth;
+        var vm = new MainViewModel(_settingsService, _processManager, _bonjourService, _autostartService);
+
+        vm.ToggleLatencyModeCommand.Execute(null);   // Smooth -> Fast
+        Assert.True(vm.IsFastMode);
+        Assert.Equal(WorkLatencyMode.Fast, _settingsService.CurrentSettings.WorkLatencyMode);
+        Assert.Equal("buffer 12", _processManager.SentCommands[^1]);
+
+        vm.ToggleLatencyModeCommand.Execute(null);   // Fast -> Balanced
+        Assert.True(vm.IsBalancedMode);
+        Assert.Equal("buffer 35", _processManager.SentCommands[^1]);
+
+        vm.ToggleLatencyModeCommand.Execute(null);   // Balanced -> Smooth
+        Assert.True(vm.IsSmoothMode);
+        Assert.Equal("mode smooth", _processManager.SentCommands[^1]);
+
+        vm.IsBalancedMode = true;                    // radio button
+        Assert.Equal("buffer 35", _processManager.SentCommands[^1]);
     }
 
     [Fact]

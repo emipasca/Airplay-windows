@@ -214,11 +214,12 @@ raop_handler_info(raop_conn_t *conn,
 
     plist_t displays_node = plist_new_array();
     plist_t displays_0_node = plist_new_dict();
-    plist_t displays_0_width_physical_node = plist_new_uint(0);
-    plist_t displays_0_height_physical_node = plist_new_uint(0);
+    /* Airplay-windows: optional physical size (mm) and point size for HiDPI ("Retina") receivers */
+    plist_t displays_0_width_physical_node = plist_new_uint(raop->width_mm);
+    plist_t displays_0_height_physical_node = plist_new_uint(raop->height_mm);
     plist_t displays_0_uuid_node = plist_new_string("e0ff8a27-6738-3d56-8a16-cc53aacee925");
-    plist_t displays_0_width_node = plist_new_uint(raop->width);
-    plist_t displays_0_height_node = plist_new_uint(raop->height);
+    plist_t displays_0_width_node = plist_new_uint(raop->width_points ? raop->width_points : raop->width);
+    plist_t displays_0_height_node = plist_new_uint(raop->height_points ? raop->height_points : raop->height);
     plist_t displays_0_width_pixels_node = plist_new_uint(raop->width);
     plist_t displays_0_height_pixels_node = plist_new_uint(raop->height);
     plist_t displays_0_rotation_node = plist_new_bool(0); /* set to true in AppleTV gen 3 (which has features bit 8  set */

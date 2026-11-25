@@ -25,7 +25,11 @@ public sealed class EngineResourceSampler : IDisposable
     private List<PerformanceCounter> _decodeCounters = new();
     private List<PerformanceCounter> _3dCounters = new();
     private DateTime _countersRefreshedAt = DateTime.MinValue;
-    private static readonly TimeSpan CounterRefreshInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan CounterRefreshInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan GpuSampleInterval = TimeSpan.FromSeconds(5);
+    private DateTime _gpuSampledAt = DateTime.MinValue;
+    private double? _lastGpuDecode;
+    private double? _lastGpu3d;
 
     public EngineResourceSample? Sample(int? pid)
     {
@@ -63,12 +67,21 @@ public sealed class EngineResourceSampler : IDisposable
             double ramMb = 0;
             try { ramMb = process.WorkingSet64 / (1024.0 * 1024.0); } catch { }
 
-            RefreshGpuCounters(now);
+            // GPU "GPU Engine" counters make the driver collect per-process scheduler statistics,
+            // which can cause micro-stutter in the very video we are measuring; read them only
+            // every GpuSampleInterval and reuse the last values in between.
+            if (now - _gpuSampledAt >= GpuSampleInterval)
+            {
+                _gpuSampledAt = now;
+                RefreshGpuCounters(now);
+                _lastGpuDecode = SumCounters(_decodeCounters);
+                _lastGpu3d = SumCounters(_3dCounters);
+            }
             return new EngineResourceSample(
                 Math.Clamp(cpu, 0, 100),
                 ramMb,
-                SumCounters(_decodeCounters),
-                SumCounters(_3dCounters));
+                _lastGpuDecode,
+                _lastGpu3d);
         }
     }
 
@@ -131,6 +144,9 @@ public sealed class EngineResourceSampler : IDisposable
         _lastCpu = TimeSpan.Zero;
         _lastCpuAt = default;
         _countersRefreshedAt = DateTime.MinValue;
+        _gpuSampledAt = DateTime.MinValue;
+        _lastGpuDecode = null;
+        _lastGpu3d = null;
         foreach (var c in _decodeCounters) c.Dispose();
         foreach (var c in _3dCounters) c.Dispose();
         _decodeCounters = new();

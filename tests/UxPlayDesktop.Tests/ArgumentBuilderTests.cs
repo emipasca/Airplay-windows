@@ -38,7 +38,7 @@ public class ArgumentBuilderTests
     }
 
     [Fact]
-    public void BuildArguments_WorkPreset_Uses1440p16x10GpuPipelineWithoutAudio()
+    public void BuildArguments_WorkPreset_UsesRetinaGpuPipelineWithoutAudio()
     {
         var settings = new AppSettings
         {
@@ -49,24 +49,113 @@ public class ArgumentBuilderTests
             AudioDelayMs = 120
         };
 
-        var args = _builder.BuildArguments(settings).ToList();
+        var standardDefault = _builder.BuildArguments(settings).ToList();
+        Assert.Equal("1728x1117@60", standardDefault[standardDefault.IndexOf("-s") + 1]);   // Retina is opt-in
 
-        Assert.Equal("2304x1440@60", args[args.IndexOf("-s") + 1]);
+        settings.WorkRetina = true;
+        var args = _builder.BuildArguments(settings).ToList();
+        Assert.Equal("3456x2234@60", args[args.IndexOf("-s") + 1]);
+        Assert.Contains("-hidpi", args);
+        Assert.Equal("345x223", args[args.IndexOf("-physical") + 1]);
+
+        settings.WorkRetina = false;
+        var standard = _builder.BuildArguments(settings).ToList();
+        Assert.Equal("1728x1117@60", standard[standard.IndexOf("-s") + 1]);
+        Assert.DoesNotContain("-hidpi", standard);
+        Assert.DoesNotContain("-physical", standard);
         Assert.Equal("60", args[args.IndexOf("-fps") + 1]);
         Assert.Contains("-h265", args);
         Assert.Equal("d3d12h264dec", args[args.IndexOf("-vd") + 1]);
+        // default: timestamp sync on, engine sizes the smoothing buffer itself
         Assert.Equal("d3d12videosink", args[args.IndexOf("-vs") + 1]);
-        Assert.Equal("no", args[args.IndexOf("-vsync") + 1]);
-        Assert.Single(args, a => a == "-vsync");
+        Assert.Equal("auto", args[args.IndexOf("-vlatency") + 1]);
+        Assert.Contains("-vadapt", args);
+        Assert.DoesNotContain("-vsync", args);   // AudioDelayMs ignored: audio is off
         Assert.Equal("0", args[args.IndexOf("-as") + 1]);
         Assert.DoesNotContain("3440x1440", args);
     }
 
     [Fact]
-    public void Work_IsDefaultPreset_And16x10()
+    public void BuildArguments_WorkPreset_QualityTestKnobs()
+    {
+        var defaults = _builder.BuildArguments(new AppSettings { Preset = PerformancePreset.WorkExtendedDisplay }).ToList();
+        Assert.Contains("-h265", defaults);
+        Assert.Equal("60", defaults[defaults.IndexOf("-fps") + 1]);
+
+        var test = _builder.BuildArguments(new AppSettings
+        {
+            Preset = PerformancePreset.WorkExtendedDisplay,
+            WorkUseH265 = false,
+            WorkMaxFps = 30
+        }).ToList();
+        Assert.DoesNotContain("-h265", test);
+        Assert.Equal("30", test[test.IndexOf("-fps") + 1]);
+        Assert.Equal("d3d12h264dec", test[test.IndexOf("-vd") + 1]);
+    }
+
+    [Fact]
+    public void BuildArguments_WorkPreset_ZeroBuffer_ShowsFramesOnArrival()
+    {
+        var settings = new AppSettings { Preset = PerformancePreset.WorkExtendedDisplay, WorkSmoothingAuto = false, WorkSmoothingBufferMs = 0 };
+
+        var args = _builder.BuildArguments(settings).ToList();
+
+        Assert.Equal("d3d12videosink", args[args.IndexOf("-vs") + 1]);
+        Assert.Equal("no", args[args.IndexOf("-vsync") + 1]);
+        Assert.DoesNotContain("-vlatency", args);
+        Assert.DoesNotContain("-vadapt", args);
+    }
+
+    [Fact]
+    public void BuildArguments_WorkPreset_EnablesLiveControl_AndStartsInSavedMode()
+    {
+        var smooth = _builder.BuildArguments(new AppSettings { Preset = PerformancePreset.WorkExtendedDisplay }).ToList();
+        Assert.Contains("-vcontrol", smooth);
+        Assert.DoesNotContain("-vbuffer", smooth);
+
+        foreach (var (mode, ms) in new[] { (WorkLatencyMode.Fast, WorkPreset.FastBufferMs), (WorkLatencyMode.Balanced, WorkPreset.BalancedBufferMs) })
+        {
+            var args = _builder.BuildArguments(new AppSettings { Preset = PerformancePreset.WorkExtendedDisplay, WorkLatencyMode = mode }).ToList();
+            Assert.Contains("-vcontrol", args);
+            Assert.Equal($"{ms}", args[args.IndexOf("-vbuffer") + 1]);
+            // -vbuffer must follow -vlatency so the engine can restore the smooth buffer later
+            Assert.True(args.IndexOf("-vbuffer") > args.IndexOf("-vlatency"));
+        }
+
+        Assert.Equal("buffer 12", ArgumentBuilder.CommandForMode(WorkLatencyMode.Fast));
+        Assert.Equal("buffer 35", ArgumentBuilder.CommandForMode(WorkLatencyMode.Balanced));
+        Assert.Equal("mode smooth", ArgumentBuilder.CommandForMode(WorkLatencyMode.Smooth));
+
+        var off = _builder.BuildArguments(new AppSettings { Preset = PerformancePreset.WorkExtendedDisplay, WorkSmoothingAuto = false, WorkSmoothingBufferMs = 0 }).ToList();
+        Assert.DoesNotContain("-vcontrol", off);   // sync off: nothing to switch
+    }
+
+    [Fact]
+    public void BuildArguments_WorkPreset_ManualBuffer_PinsLatency()
+    {
+        var settings = new AppSettings { Preset = PerformancePreset.WorkExtendedDisplay, WorkSmoothingAuto = false, WorkSmoothingBufferMs = 40 };
+
+        var args = _builder.BuildArguments(settings).ToList();
+
+        Assert.Equal($"{WorkPreset.DecodeAllowanceMs + 40}", args[args.IndexOf("-vlatency") + 1]);
+        Assert.Contains("-vadapt", args);
+        Assert.DoesNotContain("-vsync", args);
+    }
+
+    [Fact]
+    public void BuildArguments_WorkPreset_ClampsBuffer()
+    {
+        var settings = new AppSettings { Preset = PerformancePreset.WorkExtendedDisplay, WorkSmoothingAuto = false, WorkSmoothingBufferMs = 5000 };
+
+        var args = _builder.BuildArguments(settings).ToList();
+        Assert.Equal($"{WorkPreset.DecodeAllowanceMs + WorkPreset.MaxSmoothingBufferMs}", args[args.IndexOf("-vlatency") + 1]);
+    }
+
+    [Fact]
+    public void Work_IsDefaultPreset_AtMacBookPro16Size()
     {
         Assert.Equal(PerformancePreset.WorkExtendedDisplay, new AppSettings().Preset);
-        Assert.Equal(16.0 / 10.0, (double)WorkPreset.Width / WorkPreset.Height, 3);
+        Assert.Equal((1728, 1117), (WorkPreset.Width, WorkPreset.Height));
     }
 
     [Fact]

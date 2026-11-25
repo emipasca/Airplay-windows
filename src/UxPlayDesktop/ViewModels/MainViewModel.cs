@@ -75,6 +75,7 @@ public class MainViewModel : ViewModelBase
                 if (value != ServerState.Streaming)
                 {
                     Metrics.Reset();
+                    _metricsLog.EndSession();
                 }
 
                 if (value == ServerState.Streaming)
@@ -100,6 +101,7 @@ public class MainViewModel : ViewModelBase
     public LiveMetricsViewModel Metrics { get; } = new();
     public bool IsStreaming => ServerState == ServerState.Streaming;
     private readonly EngineResourceSampler _resourceSampler = new();
+    private readonly MetricsCsvLog _metricsLog = new();
     private int _resourceSampleInFlight;
     public ILocalizationService Loc => LocalizationService.Instance;
 
@@ -470,7 +472,7 @@ public class MainViewModel : ViewModelBase
             {
                 Settings.TargetDisplayIndex = value.Index;
                 OnPropertyChanged();
-                _windowService.MoveVideoWindowToDisplay(value.Index, Settings.ForceFullscreen);
+                PlaceVideoWindow(value.Index);
                 if (Settings.AlwaysOnTop)
                 {
                     _windowService.SetAlwaysOnTop(true);
@@ -575,6 +577,7 @@ public class MainViewModel : ViewModelBase
                 Settings.Preset = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(PresetDescription));
+                OnPropertyChanged(nameof(IsWorkPreset));
                 _settingsService.Save(Settings);
             }
             if (_selectedPresetOption == null || _selectedPresetOption.Preset != value)
@@ -590,6 +593,110 @@ public class MainViewModel : ViewModelBase
     }
 
     public string PresetDescription => Settings.Preset.GetDescription();
+
+    public bool IsWorkPreset => Settings.Preset == PerformancePreset.WorkExtendedDisplay;
+
+    /// <summary>Work preset jitter buffer in ms (0 = off). Applies on the next server start.</summary>
+    public int WorkSmoothingBufferMs
+    {
+        get => Settings.WorkSmoothingBufferMs;
+        set
+        {
+            var clamped = Math.Clamp(value, 0, WorkPreset.MaxSmoothingBufferMs);
+            if (Settings.WorkSmoothingBufferMs == clamped) return;
+            Settings.WorkSmoothingBufferMs = clamped;
+            _settingsService.Save(Settings);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(WorkSmoothingBufferText));
+        }
+    }
+
+    public bool WorkSmoothingAuto
+    {
+        get => Settings.WorkSmoothingAuto;
+        set
+        {
+            if (Settings.WorkSmoothingAuto == value) return;
+            Settings.WorkSmoothingAuto = value;
+            _settingsService.Save(Settings);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsManualSmoothing));
+            OnPropertyChanged(nameof(WorkSmoothingBufferText));
+        }
+    }
+
+    public bool IsManualSmoothing => !Settings.WorkSmoothingAuto;
+
+    /// <summary>Work preset latency mode. Switches the running engine live; also saved so the
+    /// next start uses it.</summary>
+    public WorkLatencyMode LatencyMode
+    {
+        get => Settings.WorkLatencyMode;
+        set
+        {
+            if (Settings.WorkLatencyMode == value) return;
+            Settings.WorkLatencyMode = value;
+            _settingsService.Save(Settings);
+            if (IsWorkPreset)
+            {
+                _processManager.SendEngineCommand(ArgumentBuilder.CommandForMode(value));
+            }
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsFastMode));
+            OnPropertyChanged(nameof(IsBalancedMode));
+            OnPropertyChanged(nameof(IsSmoothMode));
+            OnPropertyChanged(nameof(LatencyModeText));
+            OnPropertyChanged(nameof(LatencyModeHint));
+        }
+    }
+
+    // Radio-button bindings
+    public bool IsFastMode { get => LatencyMode == WorkLatencyMode.Fast; set { if (value) LatencyMode = WorkLatencyMode.Fast; } }
+    public bool IsBalancedMode { get => LatencyMode == WorkLatencyMode.Balanced; set { if (value) LatencyMode = WorkLatencyMode.Balanced; } }
+    public bool IsSmoothMode { get => LatencyMode == WorkLatencyMode.Smooth; set { if (value) LatencyMode = WorkLatencyMode.Smooth; } }
+
+    public string LatencyModeText => LatencyMode switch
+    {
+        WorkLatencyMode.Fast => "⚡ Fast",
+        WorkLatencyMode.Balanced => "◐ Balanced",
+        _ => "◼ Smooth"
+    };
+
+    public string LatencyModeHint => LatencyMode switch
+    {
+        WorkLatencyMode.Fast => $"Fast: {WorkPreset.FastBufferMs} ms buffer, lowest delay; Wi-Fi hiccups show as a brief freeze. Ctrl+Shift+L cycles modes.",
+        WorkLatencyMode.Balanced => $"Balanced: {WorkPreset.BalancedBufferMs} ms buffer; rides out small hiccups, short freeze on big ones. Ctrl+Shift+L cycles modes.",
+        _ => "Smooth: automatic buffer for even motion; most delay. Ctrl+Shift+L cycles modes."
+    };
+
+    /// <summary>Cycles Fast → Balanced → Smooth → Fast.</summary>
+    public void CycleLatencyMode() => LatencyMode = LatencyMode switch
+    {
+        WorkLatencyMode.Fast => WorkLatencyMode.Balanced,
+        WorkLatencyMode.Balanced => WorkLatencyMode.Smooth,
+        _ => WorkLatencyMode.Fast
+    };
+
+    public ICommand ToggleLatencyModeCommand { get; }
+
+    /// <summary>Work preset 2x ("Retina") resolution. Applies on the next server start.</summary>
+    public bool WorkRetina
+    {
+        get => Settings.WorkRetina;
+        set
+        {
+            if (Settings.WorkRetina == value) return;
+            Settings.WorkRetina = value;
+            _settingsService.Save(Settings);
+            OnPropertyChanged();
+        }
+    }
+
+    public string WorkSmoothingBufferText => WorkSmoothingAuto
+        ? "Automatic — sized from measured Wi-Fi delivery (live value in Total delay)"
+        : WorkSmoothingBufferMs == 0
+        ? "Off — frames shown on arrival (lowest delay, Wi-Fi jitter visible)"
+        : $"{WorkSmoothingBufferMs} ms — evens out Wi-Fi jitter (adds {WorkSmoothingBufferMs} ms delay)";
 
     public IReadOnlyList<PresetOption> PresetOptions { get; }
 
@@ -718,6 +825,12 @@ public class MainViewModel : ViewModelBase
         {
             if (IsStreaming) Metrics.ApplyLine(line, DateTime.Now);
         });
+        Metrics.StreamSampleApplied += () =>
+        {
+            // One CSV file per streaming session, opened on its first sample.
+            if (!_metricsLog.IsSessionOpen) _metricsLog.StartSession(DateTime.Now);
+            _metricsLog.Append(Metrics, DateTime.Now);
+        };
 
         ToggleServerCommand = new RelayCommand(async () => await ToggleServerAsync());
         SaveSettingsCommand = new RelayCommand(SaveSettings);
@@ -739,6 +852,7 @@ public class MainViewModel : ViewModelBase
         RunDiagnosticCommand = new RelayCommand(async () => await RunDiagnosticsAsync());
         CloseDiagnosticCommand = new RelayCommand(() => ShowDiagnosticDialog = false);
         SetAccentColorCommand = new RelayCommand(color => { if (color is string hex) AccentColor = hex; });
+        ToggleLatencyModeCommand = new RelayCommand(CycleLatencyMode);
 
         // Global hotkey events
         _hotkeyService.OnToggleFullscreen += () => RunOnUi(() =>
@@ -752,6 +866,7 @@ public class MainViewModel : ViewModelBase
         _hotkeyService.OnToggleServer += () => RunOnUi(async () => await ToggleServerAsync());
         _hotkeyService.OnToggleAlwaysOnTop += () => RunOnUi(ToggleAlwaysOnTop);
         _hotkeyService.OnCaptureScreenshot += () => RunOnUi(CaptureScreenshot);
+        _hotkeyService.OnToggleLatencyMode += () => RunOnUi(CycleLatencyMode);
 
         _sessionTimer = new DispatcherTimer
         {
@@ -990,11 +1105,88 @@ public class MainViewModel : ViewModelBase
 
         if (ServerState == ServerState.Streaming && !string.IsNullOrEmpty(Session.ActiveResolution))
         {
-            _windowService.MoveVideoWindowToDisplay(Settings.TargetDisplayIndex, Settings.ForceFullscreen);
+            PlaceVideoWindow(Settings.TargetDisplayIndex);
         }
         else if (!IsStreamingSessionActive)
         {
             TryApplyPendingUpdate();
+        }
+    }
+
+    /// <summary>Places the video window: 1:1 pixel-perfect for the Work preset (no scaling blur),
+    /// otherwise the original move/fullscreen behaviour.</summary>
+    private void PlaceVideoWindow(int displayIndex)
+    {
+        if (IsWorkPreset && Settings.WorkPixelPerfect && !Settings.ForceFullscreen &&
+            TryParseResolution(Session.ActiveResolution, out var w, out var h))
+        {
+            _windowService.FitVideoWindowPixelPerfect(displayIndex, w, h, Settings.BorderlessWindow);
+        }
+        else
+        {
+            _windowService.MoveVideoWindowToDisplay(displayIndex, Settings.ForceFullscreen);
+        }
+    }
+
+    public static bool TryParseResolution(string? text, out int width, out int height)
+    {
+        width = height = 0;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var parts = text.Split('x', 'X', '×');
+        return parts.Length == 2 &&
+               int.TryParse(parts[0].Trim(), out width) && int.TryParse(parts[1].Trim(), out height) &&
+               width > 0 && height > 0;
+    }
+
+    /// <summary>Quality test: H.265 (on) or H.264 (off). Restarts the server so the Mac reconnects
+    /// with the new codec.</summary>
+    public bool WorkUseH265
+    {
+        get => Settings.WorkUseH265;
+        set
+        {
+            if (Settings.WorkUseH265 == value) return;
+            Settings.WorkUseH265 = value;
+            _settingsService.Save(Settings);
+            OnPropertyChanged();
+            _ = RestartServerIfRunningAsync();
+        }
+    }
+
+    /// <summary>Quality test: cap the Mac at 30 fps instead of 60. Restarts the server.</summary>
+    public bool WorkFps30
+    {
+        get => Settings.WorkMaxFps <= 30;
+        set
+        {
+            var fps = value ? 30 : WorkPreset.Fps;
+            if (Settings.WorkMaxFps == fps) return;
+            Settings.WorkMaxFps = fps;
+            _settingsService.Save(Settings);
+            OnPropertyChanged();
+            _ = RestartServerIfRunningAsync();
+        }
+    }
+
+    /// <summary>Applies settings the Mac only reads when it connects (codec, frame cap).</summary>
+    private async Task RestartServerIfRunningAsync()
+    {
+        if (!IsServerRunning) return;
+        await _processManager.StopAsync();
+        await StartServerAsync();
+    }
+
+    /// <summary>Work preset 1:1 display. Applies to the open video window immediately.</summary>
+    public bool WorkPixelPerfect
+    {
+        get => Settings.WorkPixelPerfect;
+        set
+        {
+            if (Settings.WorkPixelPerfect == value) return;
+            Settings.WorkPixelPerfect = value;
+            _settingsService.Save(Settings);
+            OnPropertyChanged();
+            if (IsStreaming) PlaceVideoWindow(Settings.TargetDisplayIndex);
         }
     }
 
@@ -1018,7 +1210,7 @@ public class MainViewModel : ViewModelBase
                 {
                     RunOnUi(() =>
                     {
-                        _windowService.MoveVideoWindowToDisplay(Settings.TargetDisplayIndex, Settings.ForceFullscreen);
+                        PlaceVideoWindow(Settings.TargetDisplayIndex);
                         if (Settings.AlwaysOnTop)
                         {
                             _windowService.SetAlwaysOnTop(true, hwnd);
@@ -1032,7 +1224,7 @@ public class MainViewModel : ViewModelBase
                         {
                             RunOnUi(() =>
                             {
-                                _windowService.MoveVideoWindowToDisplay(Settings.TargetDisplayIndex, Settings.ForceFullscreen);
+                                PlaceVideoWindow(Settings.TargetDisplayIndex);
                             });
                         }
                     }

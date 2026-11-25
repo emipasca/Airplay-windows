@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include <string>
 #include <algorithm>
+#include <thread>
 #include <vector>
 #include <array>
 #include <fstream>
@@ -165,6 +166,51 @@ static bool nofreeze = false;
 static unsigned short raop_port;
 static unsigned short airplay_port;
 static uint64_t remote_clock_offset = 0;
+/* Airplay-windows: HiDPI display description (-hidpi, -physical WxH in mm) */
+static bool hidpi_display = false;
+static int physical_width_mm = 0;
+static int physical_height_mm = 0;
+/* Airplay-windows: adaptive video pacing (-vadapt), see video_process() */
+static bool video_adaptive_pacing = false;
+static int64_t video_pace_min_offset = 0;
+static const int64_t VPACE_MAX_STEP = 4000000;          /* 4 ms per frame: catch up ~240 ms/s */
+static const int64_t VPACE_FORGET_PER_FRAME = 200000;   /* 0.2 ms per frame: minimum rises ~12 ms/s */
+
+/* Airplay-windows (-vcontrol): read control commands from stdin on a background thread, so a
+ * desktop front-end can change settings live.
+ * Commands: "mode fast", "mode smooth", "buffer <ms>" (fixed buffer, 0..1000). */
+static bool stdin_control = false;
+
+static void stdin_control_loop() {
+    char line[256];
+    while (fgets(line, sizeof(line), stdin) != nullptr) {
+        std::string cmd(line);
+        if (cmd.compare(0, 3, "\xEF\xBB\xBF") == 0) cmd.erase(0, 3);   /* UTF-8 BOM from some writers */
+        while (!cmd.empty() && (cmd.back() == '\n' || cmd.back() == '\r' || cmd.back() == ' ')) cmd.pop_back();
+        if (cmd == "mode fast") {
+            video_renderer_request_fast_mode(true);
+        } else if (cmd == "mode smooth") {
+            video_renderer_request_fast_mode(false);
+        } else if (cmd.compare(0, 7, "buffer ") == 0) {
+            char *end;
+            long ms = strtol(cmd.c_str() + 7, &end, 10);
+            if (*end == '\0' && ms >= 0 && ms <= 1000) {
+                video_renderer_request_buffer_ms((int) ms);
+            } else {
+                fprintf(stderr, "invalid control command: %s (buffer 0..1000)\n", cmd.c_str());
+            }
+        } else if (!cmd.empty()) {
+            fprintf(stderr, "unknown control command: %s\n", cmd.c_str());
+        }
+    }
+}
+
+static void start_stdin_control() {
+    static bool started = false;
+    if (started) return;
+    started = true;
+    std::thread(stdin_control_loop).detach();
+}
 static std::vector<std::string> allowed_clients;
 static std::vector<std::string> blocked_clients;
 static bool restrict_clients;
@@ -1804,6 +1850,54 @@ static void parse_arguments (int argc, char *argv[]) {
             fprintf(stderr,"invalid: option \"-scrsv\" is currently only implemented for Linux/*BSD systems with D-Bus service\n");
             exit(1);
 #endif
+        } else if (arg == "-vlatency") {
+            /* Airplay-windows: fixed video pipeline latency in ms (replaces the queried, worst-case latency) */
+            if (!option_has_value(i, argc, arg, argv[i+1])) exit(1);
+            if (strcmp(argv[i+1], "auto") == 0) {
+                /* 10 ms decode allowance; start with a 60 ms buffer and adapt from measurements */
+                video_renderer_set_auto_latency(10, 60);
+                i++;
+                continue;
+            }
+            char *end;
+            long ms = strtol(argv[++i], &end, 10);
+            if (*end != '\0' || ms < 0 || ms > 1000) {
+                fprintf(stderr, "invalid -vlatency %s: must be 0..1000 millisecs\n", argv[i]);
+                exit(1);
+            }
+            video_renderer_set_latency_ms((int) ms);
+        } else if (arg == "-vfast") {
+            /* Airplay-windows: start in Fast latency mode (see -vcontrol to switch live) */
+            video_renderer_set_initial_fast_mode();
+        } else if (arg == "-hidpi") {
+            /* Airplay-windows: report a Retina-style display (points = pixels / 2) */
+            hidpi_display = true;
+        } else if (arg == "-physical") {
+            /* Airplay-windows: physical display size in millimetres, e.g. 345x223 */
+            if (!option_has_value(i, argc, arg, argv[i+1])) exit(1);
+            int w = 0, h = 0;
+            if (sscanf(argv[++i], "%dx%d", &w, &h) != 2 || w <= 0 || h <= 0 || w > 5000 || h > 5000) {
+                fprintf(stderr, "invalid -physical %s: use WIDTHxHEIGHT in millimetres, e.g. 345x223\n", argv[i]);
+                exit(1);
+            }
+            physical_width_mm = w;
+            physical_height_mm = h;
+        } else if (arg == "-vbuffer") {
+            /* Airplay-windows: start with a fixed buffer of n ms (switchable live with -vcontrol) */
+            if (!option_has_value(i, argc, arg, argv[i+1])) exit(1);
+            char *end;
+            long ms = strtol(argv[++i], &end, 10);
+            if (*end != '\0' || ms < 0 || ms > 1000) {
+                fprintf(stderr, "invalid -vbuffer %s: must be 0..1000 millisecs\n", argv[i]);
+                exit(1);
+            }
+            video_renderer_set_initial_buffer_ms((int) ms);
+        } else if (arg == "-vcontrol") {
+            /* Airplay-windows: accept "mode fast" / "mode smooth" lines on stdin */
+            stdin_control = true;
+        } else if (arg == "-vadapt") {
+            /* Airplay-windows: pace video on the fastest recent frame arrival, not the first frame */
+            video_adaptive_pacing = true;
         } else if (arg == "-vsync") {
             video_sync = true;
 	    if (i <  argc - 1) {
@@ -2928,6 +3022,20 @@ extern "C" void video_process (void *cls, raop_ntp_t *ntp, video_decode_struct *
         if (!remote_clock_offset) {
             uint64_t local_time = (data->ntp_time_local ? data->ntp_time_local : get_local_time());
             remote_clock_offset = local_time - data->ntp_time_remote;
+            video_pace_min_offset = (int64_t) remote_clock_offset;
+        }
+        /* Airplay-windows (-vadapt): without NTP clock sync the pacing schedule is anchored on the
+         * first frame's arrival, which is often hundreds of ms late (encoder start-up, large IDR);
+         * every later frame then waits that long. Track the fastest recent arrival instead (a
+         * running minimum that slowly forgets) and glide the schedule toward it, at most
+         * VPACE_MAX_STEP per frame so presentation timestamps stay monotonic. */
+        if (video_adaptive_pacing && video_sync && !data->ntp_time_local) {
+            int64_t arrival_offset = (int64_t) get_local_time() - (int64_t) data->ntp_time_remote;
+            video_pace_min_offset = std::min(video_pace_min_offset + VPACE_FORGET_PER_FRAME, arrival_offset);
+            int64_t diff = video_pace_min_offset - (int64_t) remote_clock_offset;
+            if (diff > VPACE_MAX_STEP) diff = VPACE_MAX_STEP;
+            if (diff < -VPACE_MAX_STEP) diff = -VPACE_MAX_STEP;
+            remote_clock_offset = (uint64_t) ((int64_t) remote_clock_offset + diff);
         }
         int count = 0;
         uint64_t pts_mismatch = 0;
@@ -3340,6 +3448,18 @@ static int start_raop_server (unsigned short display[5], unsigned short tcp[3], 
     if (display[2]) raop_set_plist(raop, "refreshRate", (int) display[2]);
     if (display[3]) raop_set_plist(raop, "maxFPS", (int) display[3]);
     if (display[4]) raop_set_plist(raop, "overscanned", (int) display[4]);
+    /* Airplay-windows: describe a HiDPI ("Retina") panel: point size = half the pixel size,
+     * plus an optional physical size, so the client lays out at the point size and renders 2x */
+    if (hidpi_display) {
+        int w = display[0] ? (int) display[0] : 1920;
+        int h = display[1] ? (int) display[1] : 1080;
+        raop_set_plist(raop, "widthPoints", w / 2);
+        raop_set_plist(raop, "heightPoints", h / 2);
+    }
+    if (physical_width_mm && physical_height_mm) {
+        raop_set_plist(raop, "widthPhysical", physical_width_mm);
+        raop_set_plist(raop, "heightPhysical", physical_height_mm);
+    }
 
     if (show_client_FPS_data) raop_set_plist(raop, "clientFPSdata", 1);
     if (audiodelay >= 0) raop_set_plist(raop, "audio_delay_micros", audiodelay);
@@ -3536,6 +3656,19 @@ int start_uxplay (int argc, char *argv[]) {
         read_config_file(config_file.c_str(), argv[0]);
     }
     parse_arguments (argc, argv);
+    if (stdin_control) {
+        start_stdin_control();
+    }
+#ifdef _WIN32
+    /* Airplay-windows: declare per-monitor DPI awareness so Windows never bitmap-scales the
+     * video window (which blurs it) when display scaling is above 100%. */
+    {
+        typedef BOOL (WINAPI *SetDpiCtxFn)(HANDLE);
+        HMODULE user32 = GetModuleHandleA("user32.dll");
+        SetDpiCtxFn set_dpi_ctx = user32 ? (SetDpiCtxFn) GetProcAddress(user32, "SetProcessDpiAwarenessContext") : NULL;
+        if (set_dpi_ctx) set_dpi_ctx((HANDLE) -4);   /* DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 */
+    }
+#endif
 
 #if !defined(__APPLE__) || !defined(UXPLAY_HAVE_APPLE_P2P)
     if (peer_to_peer) {

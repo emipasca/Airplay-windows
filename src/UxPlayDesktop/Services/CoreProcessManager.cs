@@ -20,6 +20,9 @@ public interface ICoreProcessManager
     event Action<string>? MetricsLineReceived;
     /// <summary>PID of the running engine process, or null when it is not running.</summary>
     int? EngineProcessId { get; }
+    /// <summary>Sends one control line to the engine's stdin (needs the engine's -vcontrol
+    /// option). Returns false if the engine is not running.</summary>
+    bool SendEngineCommand(string command);
 
     Task<bool> StartAsync(AppSettings settings, CancellationToken cancellationToken = default);
     Task StopAsync();
@@ -51,6 +54,24 @@ public class CoreProcessManager : ICoreProcessManager, IDisposable
         {
             try { return IsRunning ? _process!.Id : null; }
             catch { return null; }
+        }
+    }
+
+    public bool SendEngineCommand(string command)
+    {
+        lock (_lock)
+        {
+            try
+            {
+                if (_process == null || _process.HasExited) return false;
+                _process.StandardInput.WriteLine(command);
+                _process.StandardInput.Flush();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 
@@ -164,6 +185,8 @@ public class CoreProcessManager : ICoreProcessManager, IDisposable
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = true,   // live control commands (engine -vcontrol)
+            StandardInputEncoding = new System.Text.UTF8Encoding(false),
             StandardOutputEncoding = System.Text.Encoding.UTF8,
             StandardErrorEncoding = System.Text.Encoding.UTF8
         };

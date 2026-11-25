@@ -14,6 +14,7 @@ public interface IGlobalHotkeyService : IDisposable
     event Action? OnToggleServer;
     event Action? OnToggleAlwaysOnTop;
     event Action? OnCaptureScreenshot;
+    event Action? OnToggleLatencyMode;
 }
 
 public class GlobalHotkeyService : IGlobalHotkeyService
@@ -32,6 +33,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
     private const int HOTKEY_ID_SERVER = 9004;     // Ctrl+Shift+S
     private const int HOTKEY_ID_TOPMOST = 9005;    // Ctrl+Shift+T
     private const int HOTKEY_ID_SCREENSHOT = 9006; // Ctrl+Shift+C
+    private const int HOTKEY_ID_LATENCY = 9007;    // Ctrl+Shift+L (Fast/Smooth)
 
     private const uint VK_F = 0x46;
     private const uint VK_M = 0x4D;
@@ -39,6 +41,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
     private const uint VK_S = 0x53;
     private const uint VK_T = 0x54;
     private const uint VK_C = 0x43;
+    private const uint VK_L = 0x4C;
 
     public event Action? OnToggleFullscreen;
     public event Action? OnToggleMute;
@@ -46,6 +49,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
     public event Action? OnToggleServer;
     public event Action? OnToggleAlwaysOnTop;
     public event Action? OnCaptureScreenshot;
+    public event Action? OnToggleLatencyMode;
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -74,6 +78,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
         RegisterHotKey(_hwnd, HOTKEY_ID_SERVER, mods, VK_S);
         RegisterHotKey(_hwnd, HOTKEY_ID_TOPMOST, mods, VK_T);
         RegisterHotKey(_hwnd, HOTKEY_ID_SCREENSHOT, mods, VK_C);
+        RegisterHotKey(_hwnd, HOTKEY_ID_LATENCY, mods, VK_L);
     }
 
     private void UnregisterAllHotkeys()
@@ -86,6 +91,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
         UnregisterHotKey(_hwnd, HOTKEY_ID_SERVER);
         UnregisterHotKey(_hwnd, HOTKEY_ID_TOPMOST);
         UnregisterHotKey(_hwnd, HOTKEY_ID_SCREENSHOT);
+        UnregisterHotKey(_hwnd, HOTKEY_ID_LATENCY);
     }
 
     private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -117,6 +123,10 @@ public class GlobalHotkeyService : IGlobalHotkeyService
                     break;
                 case HOTKEY_ID_SCREENSHOT:
                     OnCaptureScreenshot?.Invoke();
+                    handled = true;
+                    break;
+                case HOTKEY_ID_LATENCY:
+                    OnToggleLatencyMode?.Invoke();
                     handled = true;
                     break;
             }

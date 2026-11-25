@@ -27,6 +27,10 @@ public class LiveMetricsViewModel : ViewModelBase
     private EngineResourceSample? _resources;
     private double _peakMbps;
 
+    /// <summary>Raised after each once-per-second stream sample (used for the CSV log).</summary>
+    public event Action? StreamSampleApplied;
+    public EngineResourceSample? Resources => _resources;
+
     public bool HasData => _stream != null || _render != null;
     public bool IsIdle { get; private set; } = true;
 
@@ -34,7 +38,10 @@ public class LiveMetricsViewModel : ViewModelBase
     public double BitrateMbps => IsIdle || _stream == null ? 0 : _stream.Kbps / 1000.0;
     public double? NetLatencyMs => _stream?.NetLatencyMs;
     public double? NetLatencyMaxMs => _stream?.NetLatencyMaxMs;
+    public double? NetLatencyMinMs => _stream?.NetLatencyMinMs;
     public double? PipelineLatencyMs => _render?.PipelineLatencyMs;
+    /// <summary>Time the engine spent collecting render stats on its receive thread (diagnostic).</summary>
+    public double? EngineMetricsCostMs => _render?.MetricsCostMs;
     public double RenderFps { get; private set; }
     public double DroppedPerSecond { get; private set; }
     public ulong DroppedTotal => _render?.Dropped ?? 0;
@@ -42,16 +49,32 @@ public class LiveMetricsViewModel : ViewModelBase
     /// <summary>Estimated capture-to-screen delay: client encode + network (measured with the
     /// NTP-synced client timestamp), plus GStreamer pipeline latency, plus one display frame.</summary>
     public double? EstimatedTotalLatencyMs =>
-        NetLatencyMs is double net ? net + (PipelineLatencyMs ?? 0) + FrameMs : null;
+        IsRelativeLatency
+            ? (PipelineLatencyMs is double p ? p + FrameMs : null)   // network part unknown without clock sync
+            : NetLatencyMs is double net ? net + (PipelineLatencyMs ?? 0) + FrameMs : null;
+
+    /// <summary>True when the client never synced clocks, so delays are relative to the first frame.</summary>
+    public bool IsRelativeLatency => _stream?.LatencyRef == LatencyReference.Relative;
 
     // ---- Display strings ----
     public string FpsText => HasData ? (IsIdle ? "Idle" : F1(Fps)) : "—";
-    public string FpsSubText => IsIdle && HasData ? "Screen static — no new frames" : "Target 60 fps";
+    public string FpsSubText => IsIdle && HasData ? "Screen static — no new frames" : $"Shown {F1(RenderFps)}/s • target 60";
+    public double? JitterMs => _stream?.JitterMs;
+    public string JitterText => JitterMs is double j ? $"{j:0} ms" : "—";
+    public string JitterSubText => JitterMs is double j
+        ? (j < 10 ? "Steady delivery" : j < 25 ? "Some unevenness" : "Uneven — causes stutter")
+        : "Spread of frame delivery";
     public string BitrateText => HasData ? $"{F1(BitrateMbps)} Mbps" : "—";
     public string BitrateSubText => $"Peak {F1(_peakMbps)} Mbps • {(_stream?.Codec ?? "—").ToUpperInvariant()}";
-    public string NetLatencyText => NetLatencyMs is double v ? $"{v:0} ms" : "—";
-    public string NetLatencySubText => NetLatencyMaxMs is double m ? $"Worst {m:0} ms (last 1 s)" : "Mac → PC (encode + Wi-Fi)";
-    public string TotalLatencyText => EstimatedTotalLatencyMs is double v ? $"~{v:0} ms" : "—";
+    public string NetLatencyText => IsRelativeLatency
+        ? (NetLatencyMaxMs is double late ? $"{late:+0;-0;0} ms" : "—")
+        : NetLatencyMs is double v ? $"{v:0} ms" : "—";
+    public string NetLatencySubText => IsRelativeLatency
+        ? "Latest frame vs schedule (Mac clock not synced)"
+        : NetLatencyMaxMs is double m ? $"Worst {m:0} ms (last 1 s)" : "Mac → PC (encode + Wi-Fi)";
+    public string TotalLatencyText => EstimatedTotalLatencyMs is double v
+        ? (IsRelativeLatency ? $"~{v:0} ms + Wi-Fi" : $"~{v:0} ms")
+        : "—";
     public string TotalLatencySubText => PipelineLatencyMs is double p ? $"Decode/render pipeline {p:0} ms" : "Estimate";
     public string DroppedText => _render == null ? "—" : DroppedTotal.ToString("N0", CultureInfo.CurrentCulture);
     public string DroppedSubText => $"{F1(DroppedPerSecond)}/s now • keyframes {_stream?.Keyframes ?? 0}/s";
@@ -91,6 +114,7 @@ public class LiveMetricsViewModel : ViewModelBase
             _streamAt = now;
             _peakMbps = Math.Max(_peakMbps, stream.Kbps / 1000.0);
             Refresh(now);
+            StreamSampleApplied?.Invoke();
             return true;
         }
 

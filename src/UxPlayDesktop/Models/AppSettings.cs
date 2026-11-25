@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace UxPlayDesktop.Models;
 
@@ -16,6 +16,28 @@ public class AppSettings
     // Preset & Streaming
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public PerformancePreset Preset { get; set; } = PerformancePreset.WorkExtendedDisplay;
+    /// <summary>Work preset jitter buffer: frames are shown on the client's timestamps plus this
+    /// fixed delay, which evens out Wi-Fi arrival jitter. 0 = show frames on arrival (lowest
+    /// latency, but network jitter shows up as stutter).</summary>
+    public int WorkSmoothingBufferMs { get; set; } = WorkPreset.DefaultSmoothingBufferMs;
+    /// <summary>Let the engine size the Work buffer from measured frame lateness (overrides
+    /// <see cref="WorkSmoothingBufferMs"/>).</summary>
+    public bool WorkSmoothingAuto { get; set; } = true;
+    /// <summary>Work preset latency mode, switchable live while mirroring:
+    /// Fast (minimal buffer), Balanced (small fixed buffer), Smooth (automatic buffer).</summary>
+    public WorkLatencyMode WorkLatencyMode { get; set; } = WorkLatencyMode.Smooth;
+    /// <summary>Work preset: request 2x ("Retina") resolution so the Mac renders and encodes
+    /// twice the detail; the PC scales it down to fit, which looks much sharper.</summary>
+    public bool WorkRetina { get; set; } = false;
+    /// <summary>Work preset: show the stream 1:1 (window picture area = stream size, centered)
+    /// instead of scaling it, which blurs text. Ignored when full-screen is forced.</summary>
+    public bool WorkPixelPerfect { get; set; } = true;
+    /// <summary>Work preset codec: H.265 (default) or H.264. The Mac's encoders behave
+    /// differently at low bitrates; offered as a quality test.</summary>
+    public bool WorkUseH265 { get; set; } = true;
+    /// <summary>Work preset frame-rate cap sent to the Mac (60 or 30). At 30 the Mac may spend
+    /// more bits per frame (sharper while moving) at the cost of choppier motion.</summary>
+    public int WorkMaxFps { get; set; } = 60;
 
     // Video Configuration
     public int DisplayWidth { get; set; } = 1920;

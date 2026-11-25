@@ -399,6 +399,13 @@
                                         <StackPanel>
                                             <DockPanel Margin="0,0,0,8">
                                                 <TextBlock Text="LIVE METRICS" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" VerticalAlignment="Center" />
+                                                <Button DockPanel.Dock="Right" Margin="8,0,0,0" Padding="10,3"
+                                                        Style="{StaticResource SecondaryButtonStyle}"
+                                                        Command="{Binding DataContext.ToggleLatencyModeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        ToolTip="{Binding DataContext.LatencyModeHint, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        Visibility="{Binding DataContext.IsWorkPreset, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static models:ObjectToVisibilityConverter.Instance}}">
+                                                    <TextBlock Text="{Binding DataContext.LatencyModeText, RelativeSource={RelativeSource AncestorType=Window}}" FontSize="11" FontWeight="Bold" />
+                                                </Button>
                                                 <Border DockPanel.Dock="Right" HorizontalAlignment="Right" CornerRadius="4" Padding="8,2" Background="#1F2937">
                                                     <StackPanel Orientation="Horizontal">
                                                         <Ellipse Width="8" Height="8" Fill="{Binding HealthColor}" Margin="0,0,6,0" VerticalAlignment="Center" />
@@ -458,9 +465,9 @@
                                                 </Border>
                                                 <Border Style="{StaticResource MetricTile}">
                                                     <StackPanel>
-                                                        <TextBlock Text="SHOWN ON SCREEN" Style="{StaticResource MetricLabel}" />
-                                                        <TextBlock Text="{Binding RenderFps, StringFormat={}{0:0.0}/s}" Style="{StaticResource MetricValue}" />
-                                                        <TextBlock Text="Frames drawn by the GPU" Style="{StaticResource MetricSub}" />
+                                                        <TextBlock Text="NETWORK JITTER" Style="{StaticResource MetricLabel}" />
+                                                        <TextBlock Text="{Binding JitterText}" Style="{StaticResource MetricValue}" />
+                                                        <TextBlock Text="{Binding JitterSubText}" Style="{StaticResource MetricSub}" />
                                                     </StackPanel>
                                                 </Border>
                                             </UniformGrid>
@@ -526,6 +533,41 @@
 
                                     <Border Background="#1C1C1C" CornerRadius="6" Padding="12">
                                         <TextBlock Text="{Binding PresetDescription}" Foreground="#C5C5C5" FontSize="12" TextWrapping="Wrap" />
+                                    </Border>
+
+                                    <!-- Work preset: smoothness (jitter) buffer -->
+                                    <Border Background="#1C1C1C" CornerRadius="6" Padding="12" Margin="0,10,0,0"
+                                            Visibility="{Binding IsWorkPreset, Converter={x:Static models:ObjectToVisibilityConverter.Instance}}">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <TextBlock Text="Work display: latency &amp; sharpness" FontSize="12" FontWeight="SemiBold" Foreground="White" />
+                                                <TextBlock Text="modes switch live; other options on server restart" FontSize="10" Foreground="{StaticResource TextMutedBrush}"
+                                                           HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            </DockPanel>
+                                            <TextBlock Text="Latency mode (Ctrl+Shift+L cycles, works while mirroring)" FontSize="11"
+                                                       Foreground="{StaticResource TextMutedBrush}" Margin="0,8,0,4" />
+                                            <StackPanel Orientation="Horizontal" ToolTip="{Binding LatencyModeHint}">
+                                                <RadioButton GroupName="LatencyMode" Content="⚡ Fast" IsChecked="{Binding IsFastMode}" Foreground="White" FontSize="12" Margin="0,0,16,0" />
+                                                <RadioButton GroupName="LatencyMode" Content="◐ Balanced" IsChecked="{Binding IsBalancedMode}" Foreground="White" FontSize="12" Margin="0,0,16,0" />
+                                                <RadioButton GroupName="LatencyMode" Content="◼ Smooth" IsChecked="{Binding IsSmoothMode}" Foreground="White" FontSize="12" />
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding LatencyModeHint}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                            <CheckBox Content="Pixel-perfect 1:1 — no scaling blur, borderless and centered (recommended)" IsChecked="{Binding WorkPixelPerfect}"
+                                                      Foreground="White" FontSize="12" Margin="0,10,0,0" />
+                                            <CheckBox Content="Sharp (Retina) — 2× detail but much more delay (applies on server restart)" IsChecked="{Binding WorkRetina}"
+                                                      Foreground="White" FontSize="12" Margin="0,6,0,0" />
+                                            <TextBlock Text="Quality test — changing these restarts the server; the Mac reconnects. Compare text sharpness and the Bitrate tile."
+                                                       FontSize="11" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,10,0,4" />
+                                            <CheckBox Content="Use H.265 (untick to test H.264)" IsChecked="{Binding WorkUseH265}"
+                                                      Foreground="White" FontSize="12" Margin="0,2,0,0" />
+                                            <CheckBox Content="Cap at 30 fps (Mac may spend more bits per frame; motion less smooth)" IsChecked="{Binding WorkFps30}"
+                                                      Foreground="White" FontSize="12" Margin="0,6,0,0" />
+                                            <CheckBox Content="Smooth mode buffer: automatic (recommended)" IsChecked="{Binding WorkSmoothingAuto}"
+                                                      Foreground="White" FontSize="12" Margin="0,8,0,0" />
+                                            <Slider Minimum="0" Maximum="100" TickFrequency="17" IsSnapToTickEnabled="False" SmallChange="1" LargeChange="17"
+                                                    Value="{Binding WorkSmoothingBufferMs}" IsEnabled="{Binding IsManualSmoothing}" Margin="0,8,0,4" />
+                                            <TextBlock Text="{Binding WorkSmoothingBufferText}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                                        </StackPanel>
                                     </Border>
                                 </StackPanel>
                             </Border>
