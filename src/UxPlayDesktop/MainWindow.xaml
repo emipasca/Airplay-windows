@@ -6,7 +6,7 @@
         xmlns:vm="clr-namespace:UxPlayDesktop.ViewModels"
         xmlns:models="clr-namespace:UxPlayDesktop.Models"
         mc:Ignorable="d"
-        Title="UxPlay Desktop - AirPlay Mirroring"
+        Title="AirPlay Desktop - AirPlay Mirroring"
         Icon="resources/newicon.ico"
         Height="{Binding WindowHeight, Mode=TwoWay}" Width="{Binding WindowWidth, Mode=TwoWay}"
         MinHeight="{Binding WindowMinHeight, Mode=OneWay}" MinWidth="{Binding WindowMinWidth, Mode=OneWay}"
@@ -37,7 +37,7 @@
                         <TextBlock Text="📺" FontSize="26" Margin="0,0,12,0" VerticalAlignment="Center" />
                         <StackPanel VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="UxPlay Desktop" FontSize="18" FontWeight="Bold" Foreground="White" Margin="0,0,10,0" />
+                                <TextBlock Text="AirPlay Desktop" FontSize="18" FontWeight="Bold" Foreground="White" Margin="0,0,10,0" />
                                 <Border Background="#2B3A4A" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Loc[WindowsAirPlay]}" FontSize="11" Foreground="#6EA8FE" FontWeight="SemiBold" />
                                 </Border>
@@ -296,6 +296,7 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
                                     <!-- HUD Header -->
@@ -367,8 +368,107 @@
                                         </Border>
                                     </Grid>
 
+                                    <!-- LIVE METRICS (refreshed every second while streaming) -->
+                                    <Border Grid.Row="2" Background="#141414" CornerRadius="6" Padding="12" Margin="0,12,0,0"
+                                            DataContext="{Binding Metrics}"
+                                            Visibility="{Binding DataContext.IsStreaming, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static models:ObjectToVisibilityConverter.Instance}}">
+                                        <Border.Resources>
+                                            <Style x:Key="MetricTile" TargetType="Border">
+                                                <Setter Property="Background" Value="#1D1D1D" />
+                                                <Setter Property="CornerRadius" Value="6" />
+                                                <Setter Property="Padding" Value="10,8" />
+                                                <Setter Property="Margin" Value="0,0,8,8" />
+                                            </Style>
+                                            <Style x:Key="MetricLabel" TargetType="TextBlock">
+                                                <Setter Property="FontSize" Value="10" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                                <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                                            </Style>
+                                            <Style x:Key="MetricValue" TargetType="TextBlock">
+                                                <Setter Property="FontSize" Value="18" />
+                                                <Setter Property="FontWeight" Value="Bold" />
+                                                <Setter Property="Foreground" Value="White" />
+                                                <Setter Property="Margin" Value="0,2,0,0" />
+                                            </Style>
+                                            <Style x:Key="MetricSub" TargetType="TextBlock">
+                                                <Setter Property="FontSize" Value="10" />
+                                                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                                                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                                            </Style>
+                                        </Border.Resources>
+                                        <StackPanel>
+                                            <DockPanel Margin="0,0,0,8">
+                                                <TextBlock Text="LIVE METRICS" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" VerticalAlignment="Center" />
+                                                <Border DockPanel.Dock="Right" HorizontalAlignment="Right" CornerRadius="4" Padding="8,2" Background="#1F2937">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Ellipse Width="8" Height="8" Fill="{Binding HealthColor}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                                        <TextBlock Text="{Binding HealthText}" FontSize="11" FontWeight="Bold" Foreground="{Binding HealthColor}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DockPanel>
+                                            <UniformGrid Columns="4" Margin="0,0,-8,-8">
+                                                <Border Style="{StaticResource MetricTile}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="FRAME RATE (received)" Style="{StaticResource MetricLabel}" />
+                                                        <TextBlock Text="{Binding FpsText}" Style="{StaticResource MetricValue}" />
+                                                        <TextBlock Text="{Binding FpsSubText}" Style="{StaticResource MetricSub}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource MetricTile}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="BITRATE" Style="{StaticResource MetricLabel}" />
+                                                        <TextBlock Text="{Binding BitrateText}" Style="{StaticResource MetricValue}" />
+                                                        <TextBlock Text="{Binding BitrateSubText}" Style="{StaticResource MetricSub}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource MetricTile}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="MAC → PC LATENCY" Style="{StaticResource MetricLabel}" />
+                                                        <TextBlock Text="{Binding NetLatencyText}" Style="{StaticResource MetricValue}" />
+                                                        <TextBlock Text="{Binding NetLatencySubText}" Style="{StaticResource MetricSub}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource MetricTile}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="TOTAL DELAY (est.)" Style="{StaticResource MetricLabel}" />
+                                                        <TextBlock Text="{Binding TotalLatencyText}" Style="{StaticResource MetricValue}" />
+                                                        <TextBlock Text="{Binding TotalLatencySubText}" Style="{StaticResource MetricSub}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource MetricTile}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="DROPPED FRAMES" Style="{StaticResource MetricLabel}" />
+                                                        <TextBlock Text="{Binding DroppedText}" Style="{StaticResource MetricValue}" />
+                                                        <TextBlock Text="{Binding DroppedSubText}" Style="{StaticResource MetricSub}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource MetricTile}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="GPU VIDEO DECODER" Style="{StaticResource MetricLabel}" />
+                                                        <TextBlock Text="{Binding GpuDecodeText}" Style="{StaticResource MetricValue}" />
+                                                        <TextBlock Text="{Binding GpuDecodeSubText}" Style="{StaticResource MetricSub}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource MetricTile}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="ENGINE CPU" Style="{StaticResource MetricLabel}" />
+                                                        <TextBlock Text="{Binding EngineCpuText}" Style="{StaticResource MetricValue}" />
+                                                        <TextBlock Text="{Binding EngineRamText}" Style="{StaticResource MetricSub}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource MetricTile}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="SHOWN ON SCREEN" Style="{StaticResource MetricLabel}" />
+                                                        <TextBlock Text="{Binding RenderFps, StringFormat={}{0:0.0}/s}" Style="{StaticResource MetricValue}" />
+                                                        <TextBlock Text="Frames drawn by the GPU" Style="{StaticResource MetricSub}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </UniformGrid>
+                                        </StackPanel>
+                                    </Border>
+
                                     <!-- HUD Interactive Quick Controls (Volume Slider & Mute) -->
-                                    <Border Grid.Row="2" Background="#161E2E" CornerRadius="6" Padding="12,8" Margin="0,12,0,0">
+                                    <Border Grid.Row="3" Background="#161E2E" CornerRadius="6" Padding="12,8" Margin="0,12,0,0">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
@@ -813,7 +913,7 @@
                 <TabItem Header="{Binding Loc[TabAbout]}">
                     <Border Style="{StaticResource CardStyle}" Margin="0,10,0,0">
                         <StackPanel>
-                            <TextBlock Text="UxPlay Desktop for Windows" FontSize="18" FontWeight="Bold" Foreground="White" Margin="0,0,0,6" />
+                            <TextBlock Text="AirPlay Desktop for Windows" FontSize="18" FontWeight="Bold" Foreground="White" Margin="0,0,0,6" />
                             <TextBlock Text="{Binding Loc[AboutSubtitle]}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,0,16" />
 
                             <TextBlock Text="{Binding Loc[AboutDesc]}" Foreground="#CCCCCC" TextWrapping="Wrap" Margin="0,0,0,16" />
@@ -827,11 +927,11 @@
                             <TextBlock Text="{Binding Loc[AboutAuthor]}" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,4" />
                             <TextBlock Margin="0,0,0,4">
                                 <Run Text="GitHub: " Foreground="{StaticResource TextSecondaryBrush}" />
-                                <Hyperlink NavigateUri="https://github.com/jorjanion/uxplay-desktop"
+                                <Hyperlink NavigateUri="https://github.com/emipasca/Airplay-windows"
                                            RequestNavigate="Hyperlink_RequestNavigate"
                                            Foreground="{DynamicResource AccentBrush}"
                                            Cursor="Hand">
-                                    https://github.com/jorjanion/uxplay-desktop
+                                    https://github.com/emipasca/Airplay-windows
                                 </Hyperlink>
                             </TextBlock>
                             <TextBlock Text="License: GNU General Public License v3.0 (GPL-3.0)" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,16" />

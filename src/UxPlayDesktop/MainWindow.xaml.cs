@@ -63,7 +63,7 @@ public partial class MainWindow : Window
             WindowState = WindowState.Minimized;
             ShowInTaskbar = false;
             Hide();
-            _trayService?.ShowNotification("UxPlay Desktop", "UxPlay is running in the background. Click this tray icon to restore.");
+            _trayService?.ShowNotification("AirPlay Desktop", "AirPlay Desktop is running in the background. Click this tray icon to restore.");
             return;
         }
 

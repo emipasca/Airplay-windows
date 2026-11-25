@@ -198,7 +198,16 @@ raop_rtp_mirror_thread(void *arg)
     bool unsupported_codec = false;
     bool video_stream_suspended = false;
     bool first_packet = true;
-    
+
+    /* Airplay-windows: once-per-second stream metrics, parsed by the desktop app ("METRICS stream ...") */
+    uint64_t metrics_window_start = 0;
+    uint64_t metrics_bytes = 0;
+    uint32_t metrics_frames = 0;
+    uint32_t metrics_keyframes = 0;
+    uint32_t metrics_latency_count = 0;
+    double metrics_latency_sum_ms = 0.0;
+    double metrics_latency_max_ms = 0.0;
+
     while (1) {
         fd_set rfds;
         struct timeval tv;
@@ -549,6 +558,41 @@ raop_rtp_mirror_thread(void *arg)
 
                 raop_rtp_mirror->callbacks.video_process(raop_rtp_mirror->callbacks.cls, raop_rtp_mirror->ntp, &video_data);
                 free(payload_out);
+
+                /* Airplay-windows: accumulate and emit per-second stream metrics */
+                {
+                    uint64_t metrics_now = raop_ntp_get_local_time();
+                    metrics_frames++;
+                    metrics_bytes += (uint64_t) payload_size;
+                    if (packet[5] == 0x10) metrics_keyframes++;   /* IDR frame */
+                    if (ntp_timestamp_local) {
+                        /* client frame timestamp (NTP-synced) -> arrival here: encode + network delay */
+                        double latency_ms = (double) ((int64_t) metrics_now - (int64_t) ntp_timestamp_local) / 1.0e6;
+                        if (latency_ms > -1000.0 && latency_ms < 10000.0) {
+                            metrics_latency_sum_ms += latency_ms;
+                            metrics_latency_count++;
+                            if (latency_ms > metrics_latency_max_ms) metrics_latency_max_ms = latency_ms;
+                        }
+                    }
+                    if (!metrics_window_start) metrics_window_start = metrics_now;
+                    uint64_t metrics_elapsed = metrics_now - metrics_window_start;
+                    if (metrics_elapsed >= SECOND_IN_NSECS) {
+                        double secs = (double) metrics_elapsed / (double) SECOND_IN_NSECS;
+                        logger_log(raop_rtp_mirror->logger, LOGGER_INFO,
+                                   "METRICS stream fps=%.1f kbps=%.0f keyframes=%u net_latency_ms=%.1f net_latency_max_ms=%.1f codec=%s",
+                                   (double) metrics_frames / secs, (double) metrics_bytes * 8.0 / secs / 1000.0, metrics_keyframes,
+                                   metrics_latency_count ? metrics_latency_sum_ms / metrics_latency_count : -1.0,
+                                   metrics_latency_count ? metrics_latency_max_ms : -1.0,
+                                   h265_video ? h265 : h264);
+                        metrics_window_start = metrics_now;
+                        metrics_bytes = 0;
+                        metrics_frames = 0;
+                        metrics_keyframes = 0;
+                        metrics_latency_count = 0;
+                        metrics_latency_sum_ms = 0.0;
+                        metrics_latency_max_ms = 0.0;
+                    }
+                }
                 break;
             case 0x01:
                 /* 128-byte observed packet header structure 

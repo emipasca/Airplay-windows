@@ -39,7 +39,7 @@ if not defined MDNS_SRC if exist "%~dp0..\runtimes\win-arm64\native\mDNSResponde
 if not defined MDNS_SRC (
     if "%IS_SILENT%"=="0" (
         echo [ERROR] No se encontro mDNSResponder.exe en la carpeta actual.
-        echo Asegurate de ejecutar este script desde la carpeta de UxPlay.
+        echo Asegurate de ejecutar este script desde la carpeta de AirPlay Desktop.
         pause
     )
     exit /b 1
@@ -69,8 +69,11 @@ netsh advfirewall firewall add rule name="Bonjour Service (AirPlay)" dir=in acti
 netsh advfirewall firewall add rule name="Bonjour Service (AirPlay)" dir=out action=allow program="%ProgramFiles%\Bonjour\mDNSResponder.exe" enable=yes >nul 2>&1
 
 netsh advfirewall firewall delete rule name="UxPlay AirPlay Streaming" >nul 2>&1
-netsh advfirewall firewall add rule name="UxPlay AirPlay Streaming" dir=in action=allow protocol=TCP localport=7000,7001,7100 enable=yes >nul 2>&1
-netsh advfirewall firewall add rule name="UxPlay AirPlay Streaming UDP" dir=in action=allow protocol=UDP localport=6000-6009,7010,7011,5353 enable=yes >nul 2>&1
+netsh advfirewall firewall delete rule name="UxPlay AirPlay Streaming UDP" >nul 2>&1
+netsh advfirewall firewall delete rule name="AirPlay Desktop Streaming" >nul 2>&1
+netsh advfirewall firewall delete rule name="AirPlay Desktop Streaming UDP" >nul 2>&1
+netsh advfirewall firewall add rule name="AirPlay Desktop Streaming" dir=in action=allow protocol=TCP localport=7000,7001,7100 enable=yes >nul 2>&1
+netsh advfirewall firewall add rule name="AirPlay Desktop Streaming UDP" dir=in action=allow protocol=UDP localport=6000-6009,7010,7011,5353 enable=yes >nul 2>&1
 
 if "%IS_SILENT%"=="0" echo [5/5] Iniciando Bonjour Service...
 net start "Bonjour Service" >nul 2>&1
@@ -82,7 +85,7 @@ if "%IS_SILENT%"=="0" (
     echo ======================================================================
     echo  [OK] CONFIGURACION COMPLETADA CON EXITO!
     echo  Bonjour esta activo y el Firewall esta configurado para AirPlay.
-    echo  Tu iPad y iPhone ya detectaran 'UxPlay Windows' en Duplicar Pantalla.
+    echo  Tu iPad y iPhone ya detectaran 'AirPlay Windows' en Duplicar Pantalla.
     echo ======================================================================
     echo.
     pause

@@ -127,7 +127,7 @@ public class LocalizationService : ILocalizationService
         // 1. ENGLISH (Base)
         _translations["en"] = new Dictionary<string, string>
         {
-            ["AppTitle"] = "UxPlay Desktop - AirPlay Mirroring",
+            ["AppTitle"] = "AirPlay Desktop - AirPlay Mirroring",
             ["WindowsAirPlay"] = "Windows AirPlay",
             ["ServerStopped"] = "Server Stopped",
             ["ServerStoppedDesc"] = "Click Start Server to enable AirPlay mirroring.",
@@ -172,6 +172,8 @@ public class LocalizationService : ILocalizationService
             ["PresetGamingDesc"] = "Prioritizes minimal buffering latency (~30-50 ms) and fluid 60 FPS response for fast interactions.",
             ["PresetCinema"] = "High Quality Cinema [~500-1000 ms] (Smooth Video)",
             ["PresetCinemaDesc"] = "Larger jitter buffer (~500-1000 ms) and adaptive sync for artifact-free movie and multimedia streaming.",
+            ["PresetWork"] = "Work: MacBook Extended Display [~30-60 ms] (Sharp, No Audio)",
+            ["PresetWorkDesc"] = "2304x1440 16:10 at 60 FPS, pixel-perfect on a 1440p monitor. H.265 with Direct3D 12 GPU decoding, no audio/video sync wait, and audio off so sound stays on the MacBook.",
             ["PresetAudio"] = "Audio Streaming Only [~200-250 ms] (Music & Podcasts)",
             ["PresetAudioDesc"] = "Headless audio receiver mode with ~200-250 ms audio buffer for streaming music, podcasts, or system audio without video overhead.",
             ["PresetCustom"] = "Custom Configuration [Configurable Delay]",
@@ -180,17 +182,17 @@ public class LocalizationService : ILocalizationService
             ["BonjourStatusActive"] = "Active & Running",
             ["BonjourStatusStopped"] = "Stopped",
             ["BonjourStatusMissing"] = "Not Installed / Broken",
-            ["BonjourDesc"] = "Apple devices require Bonjour Service (mDNS) to discover UxPlay on the local Wi-Fi network.",
+            ["BonjourDesc"] = "Apple devices require Bonjour Service (mDNS) to discover AirPlay Desktop on the local Wi-Fi network.",
             ["RepairBonjour"] = "Repair / Start Bonjour",
             ["GeneralSettings"] = "General Settings",
             ["ServerNameLabel"] = "Server Name (shown on Apple devices)",
-            ["AutoStartServerLabel"] = "Start AirPlay server automatically when UxPlay opens",
+            ["AutoStartServerLabel"] = "Start AirPlay server automatically when AirPlay Desktop opens",
             ["AutoUpdateLabel"] = "Automatically update in background when a new version is available",
-            ["StartWithWindowsLabel"] = "Launch UxPlay Desktop when Windows starts",
+            ["StartWithWindowsLabel"] = "Launch AirPlay Desktop when Windows starts",
             ["StartMinimizedLabel"] = "Start minimized to system tray",
             ["LocalIpLabel"] = "Local IP / Network",
             ["NetworkAdapterLabel"] = "Network adapter for AirPlay discovery",
-            ["NetworkAdapterAuto"] = "Automatic (let UxPlay choose)",
+            ["NetworkAdapterAuto"] = "Automatic (let AirPlay Desktop choose)",
             ["NetworkAdapterRefresh"] = "Refresh",
             ["NetworkAdapterHelp"] = "Choose the adapter AirPlay is advertised on, e.g. your Ethernet LAN or Tailscale. Takes effect the next time the server starts.",
             ["RecordingTitle"] = "Session Recording",
@@ -199,7 +201,7 @@ public class LocalizationService : ILocalizationService
             ["StopRecordButton"] = "Stop Recording",
             ["OpenRecordings"] = "Open Recordings",
             ["ScreenshotButton"] = "Screenshot",
-            ["ScreenshotSaved"] = "Screenshot saved to Pictures/UxPlay!",
+            ["ScreenshotSaved"] = "Screenshot saved to Pictures/AirPlay Desktop!",
             ["VolumeLabel"] = "Volume",
             ["MuteButton"] = "Mute",
             ["UnmuteButton"] = "Unmute",
@@ -239,7 +241,7 @@ public class LocalizationService : ILocalizationService
             ["LogsCopy"] = "Copy Logs",
             ["LogsClear"] = "Clear Logs",
             ["LogsWaitingPlaceholder"] = "Waiting for AirPlay server logs... Start the server or connect an Apple device to see live activity.",
-            ["AboutTitle"] = "UxPlay Desktop",
+            ["AboutTitle"] = "AirPlay Desktop",
             ["AboutSubtitle"] = "Modern, high-performance AirPlay mirroring client for Windows.",
             ["AboutAuthor"] = "Developed by jorjanion. 100% Free and Open Source under GPL v3.",
             ["AboutRepo"] = "GitHub Repository",
@@ -273,14 +275,14 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Hardware-accelerated Direct3D 11/12 video rendering via GStreamer",
             ["AboutBullet3"] = "• Automatic keyframe synchronization & deferred state transitions",
             ["AboutBullet4"] = "• Windows power request display inhibitor to prevent sleep during lectures",
-            ["TrayRestore"] = "Open UxPlay Desktop",
+            ["TrayRestore"] = "Open AirPlay Desktop",
             ["TrayExit"] = "Exit",
         };
 
         // 2. SPANISH (Español)
         _translations["es"] = new Dictionary<string, string>
         {
-            ["AppTitle"] = "UxPlay Desktop - Duplicar Pantalla AirPlay",
+            ["AppTitle"] = "AirPlay Desktop - Duplicar Pantalla AirPlay",
             ["WindowsAirPlay"] = "AirPlay para Windows",
             ["ServerStopped"] = "Servidor Detenido",
             ["ServerStoppedDesc"] = "Pulsa Iniciar Servidor para activar el duplicado AirPlay.",
@@ -337,13 +339,13 @@ public class LocalizationService : ILocalizationService
             ["RepairBonjour"] = "Reparar / Iniciar Bonjour",
             ["GeneralSettings"] = "Ajustes Generales",
             ["ServerNameLabel"] = "Nombre del Servidor (se muestra en tus dispositivos Apple)",
-            ["AutoStartServerLabel"] = "Iniciar el servidor automáticamente al abrir UxPlay Desktop",
+            ["AutoStartServerLabel"] = "Iniciar el servidor automáticamente al abrir AirPlay Desktop",
             ["AutoUpdateLabel"] = "Actualizar automáticamente en segundo plano cuando haya una nueva versión",
-            ["StartWithWindowsLabel"] = "Iniciar UxPlay Desktop automáticamente con Windows",
+            ["StartWithWindowsLabel"] = "Iniciar AirPlay Desktop automáticamente con Windows",
             ["StartMinimizedLabel"] = "Iniciar minimizado en la bandeja del sistema",
             ["LocalIpLabel"] = "IP Local / Red",
             ["NetworkAdapterLabel"] = "Adaptador de red para descubrimiento AirPlay",
-            ["NetworkAdapterAuto"] = "Automático (dejar que UxPlay elija)",
+            ["NetworkAdapterAuto"] = "Automático (dejar que AirPlay Desktop elija)",
             ["NetworkAdapterRefresh"] = "Actualizar",
             ["NetworkAdapterHelp"] = "Elige el adaptador donde se anuncia AirPlay, ej. tu red local Ethernet o Tailscale. Tendrá efecto la próxima vez que se inicie el servidor.",
             ["RecordingTitle"] = "Grabación de Sesión",
@@ -352,7 +354,7 @@ public class LocalizationService : ILocalizationService
             ["StopRecordButton"] = "Detener Grabación",
             ["OpenRecordings"] = "Abrir Grabaciones",
             ["ScreenshotButton"] = "Captura",
-            ["ScreenshotSaved"] = "¡Captura guardada en Imágenes/UxPlay!",
+            ["ScreenshotSaved"] = "¡Captura guardada en Imágenes/AirPlay Desktop!",
             ["VolumeLabel"] = "Volumen",
             ["MuteButton"] = "Silenciar",
             ["UnmuteButton"] = "Activar Sonido",
@@ -392,7 +394,7 @@ public class LocalizationService : ILocalizationService
             ["LogsCopy"] = "Copiar Logs",
             ["LogsClear"] = "Limpiar Logs",
             ["LogsWaitingPlaceholder"] = "Esperando registros del servidor AirPlay... Inicia el servidor o conecta un dispositivo Apple para ver la actividad en tiempo real.",
-            ["AboutTitle"] = "UxPlay Desktop",
+            ["AboutTitle"] = "AirPlay Desktop",
             ["AboutSubtitle"] = "Cliente AirPlay moderno y de alto rendimiento para Windows.",
             ["AboutAuthor"] = "Creado por jorjanion. 100% Gratuito y de Código Abierto bajo licencia GPL v3.",
             ["AboutRepo"] = "Repositorio en GitHub",
@@ -426,14 +428,14 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Renderizado acelerado por hardware Direct3D 11/12 mediante GStreamer",
             ["AboutBullet3"] = "• Sincronización continua de fotogramas clave y transición diferida de estados",
             ["AboutBullet4"] = "• Inhibición nativa de suspensión de pantalla de Windows para evitar apagados durante clases",
-            ["TrayRestore"] = "Abrir UxPlay Desktop",
+            ["TrayRestore"] = "Abrir AirPlay Desktop",
             ["TrayExit"] = "Salir",
         };
 
         // 3. FRENCH (Français)
         _translations["fr"] = new Dictionary<string, string>
         {
-            ["AppTitle"] = "UxPlay Desktop - Recopie d'écran AirPlay",
+            ["AppTitle"] = "AirPlay Desktop - Recopie d'écran AirPlay",
             ["WindowsAirPlay"] = "AirPlay pour Windows",
             ["ServerStopped"] = "Serveur Arrêté",
             ["ServerStoppedDesc"] = "Cliquez sur Démarrer le serveur pour activer AirPlay.",
@@ -496,7 +498,7 @@ public class LocalizationService : ILocalizationService
             ["StartMinimizedLabel"] = "Démarrer réduit dans la barre d'état",
             ["LocalIpLabel"] = "IP Locale / Réseau",
             ["NetworkAdapterLabel"] = "Carte réseau pour la détection AirPlay",
-            ["NetworkAdapterAuto"] = "Automatique (laisser UxPlay choisir)",
+            ["NetworkAdapterAuto"] = "Automatique (laisser AirPlay Desktop choisir)",
             ["NetworkAdapterRefresh"] = "Actualiser",
             ["NetworkAdapterHelp"] = "Choisissez la carte réseau sur laquelle diffuser AirPlay (ex. Ethernet ou Tailscale). Prend effet au prochain démarrage du serveur.",
             ["MinimizeToTrayLabel"] = "Réduire dans la zone de notification",
@@ -521,7 +523,7 @@ public class LocalizationService : ILocalizationService
             ["LogsAutoScroll"] = "Défilement automatique",
             ["LogsCopy"] = "Copier",
             ["LogsClear"] = "Effacer",
-            ["AboutTitle"] = "UxPlay Desktop",
+            ["AboutTitle"] = "AirPlay Desktop",
             ["AboutSubtitle"] = "Client AirPlay haute performance pour Windows.",
             ["AboutAuthor"] = "Développé par jorjanion. 100% Gratuit et Open Source (GPL v3).",
             ["AboutRepo"] = "Dépôt GitHub",
@@ -555,14 +557,14 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Rendu Direct3D 11/12 accéléré par GPU via GStreamer",
             ["AboutBullet3"] = "• Synchronisation automatique des images clés",
             ["AboutBullet4"] = "• Inhibiteur de veille Windows pour éviter l'extinction d'écran",
-            ["TrayRestore"] = "Ouvrir UxPlay Desktop",
+            ["TrayRestore"] = "Ouvrir AirPlay Desktop",
             ["TrayExit"] = "Quitter",
         };
 
         // 4. GERMAN (Deutsch)
         _translations["de"] = new Dictionary<string, string>
         {
-            ["AppTitle"] = "UxPlay Desktop - AirPlay Bildschirmspiegelung",
+            ["AppTitle"] = "AirPlay Desktop - AirPlay Bildschirmspiegelung",
             ["WindowsAirPlay"] = "Windows AirPlay",
             ["ServerStopped"] = "Server Gestoppt",
             ["ServerStoppedDesc"] = "Klicken Sie auf Server starten, um AirPlay zu aktivieren.",
@@ -625,7 +627,7 @@ public class LocalizationService : ILocalizationService
             ["StartMinimizedLabel"] = "Minimiert im Infobereich starten",
             ["LocalIpLabel"] = "Lokale IP / Netzwerk",
             ["NetworkAdapterLabel"] = "Netzwerkadapter für AirPlay-Erkennung",
-            ["NetworkAdapterAuto"] = "Automatisch (UxPlay wählen lassen)",
+            ["NetworkAdapterAuto"] = "Automatisch (AirPlay Desktop wählen lassen)",
             ["NetworkAdapterRefresh"] = "Aktualisieren",
             ["NetworkAdapterHelp"] = "Wählen Sie den Adapter für AirPlay (z. B. Ethernet oder Tailscale). Wird beim nächsten Serverstart wirksam.",
             ["MinimizeToTrayLabel"] = "Beim Schließen ins Tray minimieren",
@@ -650,7 +652,7 @@ public class LocalizationService : ILocalizationService
             ["LogsAutoScroll"] = "Automatischer Bildlauf",
             ["LogsCopy"] = "Logs Kopieren",
             ["LogsClear"] = "Logs Löschen",
-            ["AboutTitle"] = "UxPlay Desktop",
+            ["AboutTitle"] = "AirPlay Desktop",
             ["AboutSubtitle"] = "Moderner Hochleistungs-AirPlay-Empfänger für Windows.",
             ["AboutAuthor"] = "Entwickelt von jorjanion. 100% Kostenlos und Open Source (GPL v3).",
             ["AboutRepo"] = "GitHub Repository",
@@ -684,14 +686,14 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Hardwarebeschleunigtes Direct3D 11/12-Rendering via GStreamer",
             ["AboutBullet3"] = "• Automatische Keyframe-Synchronisation",
             ["AboutBullet4"] = "• Windows-Energieanforderungs-Inhibitor gegen Standby",
-            ["TrayRestore"] = "UxPlay Desktop Öffnen",
+            ["TrayRestore"] = "AirPlay Desktop Öffnen",
             ["TrayExit"] = "Beenden",
         };
 
         // 5. ITALIAN (Italiano)
         _translations["it"] = new Dictionary<string, string>
         {
-            ["AppTitle"] = "UxPlay Desktop - Duplicazione Schermo AirPlay",
+            ["AppTitle"] = "AirPlay Desktop - Duplicazione Schermo AirPlay",
             ["WindowsAirPlay"] = "AirPlay per Windows",
             ["ServerStopped"] = "Server Interrotto",
             ["ServerStoppedDesc"] = "Fai clic su Avvia Server per abilitare AirPlay.",
@@ -754,7 +756,7 @@ public class LocalizationService : ILocalizationService
             ["StartMinimizedLabel"] = "Avvia ridotto a icona nella barra delle applicazioni",
             ["LocalIpLabel"] = "IP Locale / Rete",
             ["NetworkAdapterLabel"] = "Scheda di rete per rilevamento AirPlay",
-            ["NetworkAdapterAuto"] = "Automatico (lascia scegliere a UxPlay)",
+            ["NetworkAdapterAuto"] = "Automatico (lascia scegliere a AirPlay Desktop)",
             ["NetworkAdapterRefresh"] = "Aggiorna",
             ["NetworkAdapterHelp"] = "Scegli la scheda di rete su cui annunciare AirPlay (es. Ethernet o Tailscale). Ha effetto al prossimo avvio del server.",
             ["MinimizeToTrayLabel"] = "Riduci a icona alla chiusura",
@@ -779,7 +781,7 @@ public class LocalizationService : ILocalizationService
             ["LogsAutoScroll"] = "Scorrimento automatico",
             ["LogsCopy"] = "Copia",
             ["LogsClear"] = "Pulisci",
-            ["AboutTitle"] = "UxPlay Desktop",
+            ["AboutTitle"] = "AirPlay Desktop",
             ["AboutSubtitle"] = "Ricevitore AirPlay moderno e ad alte prestazioni per Windows.",
             ["AboutAuthor"] = "Sviluppato da jorjanion. 100% Gratuito e Open Source (GPL v3).",
             ["AboutRepo"] = "Repository GitHub",
@@ -813,14 +815,14 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Hardware-accelerated Direct3D 11/12 video rendering via GStreamer",
             ["AboutBullet3"] = "• Automatic keyframe synchronization & deferred state transitions",
             ["AboutBullet4"] = "• Windows power request display inhibitor to prevent sleep during lectures",
-            ["TrayRestore"] = "Apri UxPlay Desktop",
+            ["TrayRestore"] = "Apri AirPlay Desktop",
             ["TrayExit"] = "Esci",
         };
 
         // 6. PORTUGUESE (Brasil & América)
         _translations["pt-BR"] = new Dictionary<string, string>
         {
-            ["AppTitle"] = "UxPlay Desktop - Espelhamento AirPlay",
+            ["AppTitle"] = "AirPlay Desktop - Espelhamento AirPlay",
             ["WindowsAirPlay"] = "AirPlay para Windows",
             ["ServerStopped"] = "Servidor Parado",
             ["ServerStoppedDesc"] = "Clique em Iniciar Servidor para ativar o espelhamento AirPlay.",
@@ -883,7 +885,7 @@ public class LocalizationService : ILocalizationService
             ["StartMinimizedLabel"] = "Iniciar minimizado na bandeja do sistema",
             ["LocalIpLabel"] = "IP Local / Rede",
             ["NetworkAdapterLabel"] = "Adaptador de rede para detecção AirPlay",
-            ["NetworkAdapterAuto"] = "Automático (deixar UxPlay escolher)",
+            ["NetworkAdapterAuto"] = "Automático (deixar AirPlay Desktop escolher)",
             ["NetworkAdapterRefresh"] = "Atualizar",
             ["NetworkAdapterHelp"] = "Escolha o adaptador onde o AirPlay é anunciado (ex.: Ethernet ou Tailscale). Tem efeito na próxima inicialização do servidor.",
             ["MinimizeToTrayLabel"] = "Minimizar para a bandeja ao fechar",
@@ -908,7 +910,7 @@ public class LocalizationService : ILocalizationService
             ["LogsAutoScroll"] = "Rolagem Automática",
             ["LogsCopy"] = "Copiar",
             ["LogsClear"] = "Limpar",
-            ["AboutTitle"] = "UxPlay Desktop",
+            ["AboutTitle"] = "AirPlay Desktop",
             ["AboutSubtitle"] = "Cliente AirPlay moderno e veloz para Windows.",
             ["AboutAuthor"] = "Desenvolvido por jorjanion. 100% Grátis e Código Aberto (GPL v3).",
             ["AboutRepo"] = "Repositório no GitHub",
@@ -942,7 +944,7 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Hardware-accelerated Direct3D 11/12 video rendering via GStreamer",
             ["AboutBullet3"] = "• Automatic keyframe synchronization & deferred state transitions",
             ["AboutBullet4"] = "• Windows power request display inhibitor to prevent sleep during lectures",
-            ["TrayRestore"] = "Abrir UxPlay Desktop",
+            ["TrayRestore"] = "Abrir AirPlay Desktop",
             ["TrayExit"] = "Sair",
         };
         _translations["pt-PT"] = _translations["pt-BR"];
@@ -950,7 +952,7 @@ public class LocalizationService : ILocalizationService
         // 7. RUSSIAN (Русский)
         _translations["ru"] = new Dictionary<string, string>
         {
-            ["AppTitle"] = "UxPlay Desktop - Повтор экрана AirPlay",
+            ["AppTitle"] = "AirPlay Desktop - Повтор экрана AirPlay",
             ["WindowsAirPlay"] = "AirPlay для Windows",
             ["ServerStopped"] = "Сервер Остановлен",
             ["ServerStoppedDesc"] = "Нажмите Запустить Сервер для включения AirPlay.",
@@ -1013,7 +1015,7 @@ public class LocalizationService : ILocalizationService
             ["StartMinimizedLabel"] = "Запускать свернутым в системный трей",
             ["LocalIpLabel"] = "Локальный IP / Сеть",
             ["NetworkAdapterLabel"] = "Сетевой адаптер для обнаружения AirPlay",
-            ["NetworkAdapterAuto"] = "Автоматически (выбор UxPlay)",
+            ["NetworkAdapterAuto"] = "Автоматически (выбор AirPlay Desktop)",
             ["NetworkAdapterRefresh"] = "Обновить",
             ["NetworkAdapterHelp"] = "Выберите сетевой адаптер для вещания AirPlay (например, Ethernet или Tailscale). Вступает в силу при следующем запуске сервера.",
             ["MinimizeToTrayLabel"] = "Сворачивать в трей при закрытии",
@@ -1038,7 +1040,7 @@ public class LocalizationService : ILocalizationService
             ["LogsAutoScroll"] = "Автопрокрутка",
             ["LogsCopy"] = "Копировать",
             ["LogsClear"] = "Очистить",
-            ["AboutTitle"] = "UxPlay Desktop",
+            ["AboutTitle"] = "AirPlay Desktop",
             ["AboutSubtitle"] = "Современный высокопроизводительный AirPlay клиент для Windows.",
             ["AboutAuthor"] = "Разработчик: jorjanion. 100% Бесплатно и Open Source (GPL v3).",
             ["AboutRepo"] = "Репозиторий GitHub",
@@ -1072,14 +1074,14 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Hardware-accelerated Direct3D 11/12 video rendering via GStreamer",
             ["AboutBullet3"] = "• Automatic keyframe synchronization & deferred state transitions",
             ["AboutBullet4"] = "• Windows power request display inhibitor to prevent sleep during lectures",
-            ["TrayRestore"] = "Открыть UxPlay Desktop",
+            ["TrayRestore"] = "Открыть AirPlay Desktop",
             ["TrayExit"] = "Выход",
         };
 
         // 8. CHINESE (Simplified - 简体中文)
         _translations["zh-CN"] = new Dictionary<string, string>
         {
-            ["AppTitle"] = "UxPlay Desktop - AirPlay 屏幕镜像",
+            ["AppTitle"] = "AirPlay Desktop - AirPlay 屏幕镜像",
             ["WindowsAirPlay"] = "Windows AirPlay 接收器",
             ["ServerStopped"] = "服务已停止",
             ["ServerStoppedDesc"] = "点击“启动服务”以开启 AirPlay 屏幕镜像。",
@@ -1138,11 +1140,11 @@ public class LocalizationService : ILocalizationService
             ["ServerNameLabel"] = "服务名称 (在苹果设备镜像列表中显示)",
             ["AutoStartServerLabel"] = "打开软件时自动启动 AirPlay 服务",
             ["AutoUpdateLabel"] = "有新版本时在后台自动更新",
-            ["StartWithWindowsLabel"] = "开机自动启动 UxPlay Desktop",
+            ["StartWithWindowsLabel"] = "开机自动启动 AirPlay Desktop",
             ["StartMinimizedLabel"] = "启动时最小化到系统托盘",
             ["LocalIpLabel"] = "本地 IP / 网络",
             ["NetworkAdapterLabel"] = "用于 AirPlay 发现的网络适配器",
-            ["NetworkAdapterAuto"] = "自动 (由 UxPlay 自动选择)",
+            ["NetworkAdapterAuto"] = "自动 (由 AirPlay Desktop 自动选择)",
             ["NetworkAdapterRefresh"] = "刷新",
             ["NetworkAdapterHelp"] = "选择广播 AirPlay 服务的网络适配器（例如本地以太网或 Tailscale）。将在下次启动服务时生效。",
             ["MinimizeToTrayLabel"] = "点击关闭按钮时最小化到系统托盘",
@@ -1167,7 +1169,7 @@ public class LocalizationService : ILocalizationService
             ["LogsAutoScroll"] = "自动滚动",
             ["LogsCopy"] = "复制全部日志",
             ["LogsClear"] = "清空日志",
-            ["AboutTitle"] = "UxPlay Desktop",
+            ["AboutTitle"] = "AirPlay Desktop",
             ["AboutSubtitle"] = "原生、高性能且轻量级的 Windows AirPlay 镜像客户端。",
             ["AboutAuthor"] = "作者：jorjanion。基于 GPL v3 协议 100% 免费与开源。",
             ["AboutRepo"] = "GitHub 代码仓库",
@@ -1201,14 +1203,14 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Hardware-accelerated Direct3D 11/12 video rendering via GStreamer",
             ["AboutBullet3"] = "• Automatic keyframe synchronization & deferred state transitions",
             ["AboutBullet4"] = "• Windows power request display inhibitor to prevent sleep during lectures",
-            ["TrayRestore"] = "打开 UxPlay Desktop",
+            ["TrayRestore"] = "打开 AirPlay Desktop",
             ["TrayExit"] = "退出",
         };
 
         // 9. JAPANESE (日本語)
         _translations["ja"] = new Dictionary<string, string>
         {
-            ["AppTitle"] = "UxPlay Desktop - AirPlay 画面ミラーリング",
+            ["AppTitle"] = "AirPlay Desktop - AirPlay 画面ミラーリング",
             ["WindowsAirPlay"] = "Windows AirPlay レシーバー",
             ["ServerStopped"] = "サーバー停止中",
             ["ServerStoppedDesc"] = "「サーバーを開始」をクリックして AirPlay を有効化します。",
@@ -1271,7 +1273,7 @@ public class LocalizationService : ILocalizationService
             ["StartMinimizedLabel"] = "システムトレイに最小化して起動",
             ["LocalIpLabel"] = "ローカル IP / ネットワーク",
             ["NetworkAdapterLabel"] = "AirPlay 検出用ネットワークアダプター",
-            ["NetworkAdapterAuto"] = "自動 (UxPlay に任せる)",
+            ["NetworkAdapterAuto"] = "自動 (AirPlay Desktop に任せる)",
             ["NetworkAdapterRefresh"] = "更新",
             ["NetworkAdapterHelp"] = "AirPlay を通知するアダプター (イーサネット LAN や Tailscale など) を選択します。次回サーバー起動時に有効になります。",
             ["MinimizeToTrayLabel"] = "閉じるボタンでタスクトレイに最小化",
@@ -1296,7 +1298,7 @@ public class LocalizationService : ILocalizationService
             ["LogsAutoScroll"] = "自動スクロール",
             ["LogsCopy"] = "ログをコピー",
             ["LogsClear"] = "ログを消去",
-            ["AboutTitle"] = "UxPlay Desktop",
+            ["AboutTitle"] = "AirPlay Desktop",
             ["AboutSubtitle"] = "Windows 向け高性能 AirPlay レシーバー。",
             ["AboutAuthor"] = "開発者: jorjanion。GPL v3 ライセンスの完全無料・オープンソース。",
             ["AboutRepo"] = "GitHub リポジトリ",
@@ -1330,14 +1332,14 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Hardware-accelerated Direct3D 11/12 video rendering via GStreamer",
             ["AboutBullet3"] = "• Automatic keyframe synchronization & deferred state transitions",
             ["AboutBullet4"] = "• Windows power request display inhibitor to prevent sleep during lectures",
-            ["TrayRestore"] = "UxPlay Desktop を開く",
+            ["TrayRestore"] = "AirPlay Desktop を開く",
             ["TrayExit"] = "終了",
         };
 
         // 10. POLISH, DUTCH, UKRAINIAN, SWEDISH, KOREAN aliases & definitions
         _translations["pl"] = new Dictionary<string, string>(_translations["en"])
         {
-            ["AppTitle"] = "UxPlay Desktop - Klonowanie Ekranu AirPlay",
+            ["AppTitle"] = "AirPlay Desktop - Klonowanie Ekranu AirPlay",
             ["WindowsAirPlay"] = "AirPlay dla Windows",
             ["ServerStopped"] = "Serwer Zatrzymany",
             ["ReadyToConnect"] = "Gotowy do połączenia",
@@ -1353,7 +1355,7 @@ public class LocalizationService : ILocalizationService
             ["RepairBonjour"] = "Napraw Bonjour",
             ["SaveSettings"] = "Zapisz ustawienia",
             ["NetworkAdapterLabel"] = "Karta sieciowa do wykrywania AirPlay",
-            ["NetworkAdapterAuto"] = "Automatycznie (wybór UxPlay)",
+            ["NetworkAdapterAuto"] = "Automatycznie (wybór AirPlay Desktop)",
             ["NetworkAdapterRefresh"] = "Odśwież",
             ["NetworkAdapterHelp"] = "Wybierz kartę sieciową, na której ma być rozgłaszany AirPlay (np. Ethernet lub Tailscale). Zmiana zadziała przy następnym uruchomieniu serwera.",
 
@@ -1385,13 +1387,13 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Hardware-accelerated Direct3D 11/12 video rendering via GStreamer",
             ["AboutBullet3"] = "• Automatic keyframe synchronization & deferred state transitions",
             ["AboutBullet4"] = "• Windows power request display inhibitor to prevent sleep during lectures",
-            ["TrayRestore"] = "Otwórz UxPlay Desktop",
+            ["TrayRestore"] = "Otwórz AirPlay Desktop",
             ["TrayExit"] = "Wyjdź",
         };
 
         _translations["nl"] = new Dictionary<string, string>(_translations["en"])
         {
-            ["AppTitle"] = "UxPlay Desktop - AirPlay Schermsynchronisatie",
+            ["AppTitle"] = "AirPlay Desktop - AirPlay Schermsynchronisatie",
             ["WindowsAirPlay"] = "Windows AirPlay",
             ["ServerStopped"] = "Server Gestopt",
             ["ReadyToConnect"] = "Klaar om te verbinden",
@@ -1407,7 +1409,7 @@ public class LocalizationService : ILocalizationService
             ["RepairBonjour"] = "Bonjour Repareren",
             ["SaveSettings"] = "Instellingen Opslaan",
             ["NetworkAdapterLabel"] = "Netwerkadapter voor AirPlay-detectie",
-            ["NetworkAdapterAuto"] = "Automatisch (laat UxPlay kiezen)",
+            ["NetworkAdapterAuto"] = "Automatisch (laat AirPlay Desktop kiezen)",
             ["NetworkAdapterRefresh"] = "Vernieuwen",
             ["NetworkAdapterHelp"] = "Kies de netwerkadapter waarop AirPlay wordt aangekondigd (bijv. Ethernet of Tailscale). Wordt van kracht bij de volgende start van de server.",
 
@@ -1439,13 +1441,13 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Hardware-accelerated Direct3D 11/12 video rendering via GStreamer",
             ["AboutBullet3"] = "• Automatic keyframe synchronization & deferred state transitions",
             ["AboutBullet4"] = "• Windows power request display inhibitor to prevent sleep during lectures",
-            ["TrayRestore"] = "UxPlay Desktop Openen",
+            ["TrayRestore"] = "AirPlay Desktop Openen",
             ["TrayExit"] = "Afsluiten",
         };
 
         _translations["uk"] = new Dictionary<string, string>(_translations["ru"])
         {
-            ["AppTitle"] = "UxPlay Desktop - Трансляція AirPlay",
+            ["AppTitle"] = "AirPlay Desktop - Трансляція AirPlay",
             ["WindowsAirPlay"] = "AirPlay для Windows",
             ["ServerStopped"] = "Сервер Зупинено",
             ["ReadyToConnect"] = "Готовий до підключення",
@@ -1461,7 +1463,7 @@ public class LocalizationService : ILocalizationService
             ["RepairBonjour"] = "Виправити Bonjour",
             ["SaveSettings"] = "Зберегти налаштування",
             ["NetworkAdapterLabel"] = "Мережевий адаптер для виявлення AirPlay",
-            ["NetworkAdapterAuto"] = "Автоматично (вибір UxPlay)",
+            ["NetworkAdapterAuto"] = "Автоматично (вибір AirPlay Desktop)",
             ["NetworkAdapterRefresh"] = "Оновити",
             ["NetworkAdapterHelp"] = "Оберіть мережевий адаптер для оголошення AirPlay (наприклад, Ethernet або Tailscale). Набуде чинності під час наступного запуску сервера.",
 
@@ -1493,13 +1495,13 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Hardware-accelerated Direct3D 11/12 video rendering via GStreamer",
             ["AboutBullet3"] = "• Automatic keyframe synchronization & deferred state transitions",
             ["AboutBullet4"] = "• Windows power request display inhibitor to prevent sleep during lectures",
-            ["TrayRestore"] = "Відкрити UxPlay Desktop",
+            ["TrayRestore"] = "Відкрити AirPlay Desktop",
             ["TrayExit"] = "Вийти",
         };
 
         _translations["sv"] = new Dictionary<string, string>(_translations["en"])
         {
-            ["AppTitle"] = "UxPlay Desktop - AirPlay Skärmdubblering",
+            ["AppTitle"] = "AirPlay Desktop - AirPlay Skärmdubblering",
             ["ServerStopped"] = "Server Stoppad",
             ["ReadyToConnect"] = "Redo att ansluta",
             ["StartServer"] = "Starta AirPlay-server",
@@ -1510,7 +1512,7 @@ public class LocalizationService : ILocalizationService
             ["TabAbout"] = "Om",
             ["SaveSettings"] = "Spara Inställningar",
             ["NetworkAdapterLabel"] = "Nätverkskort för AirPlay-identifiering",
-            ["NetworkAdapterAuto"] = "Automatiskt (låt UxPlay välja)",
+            ["NetworkAdapterAuto"] = "Automatiskt (låt AirPlay Desktop välja)",
             ["NetworkAdapterRefresh"] = "Uppdatera",
             ["NetworkAdapterHelp"] = "Välj vilket nätverkskort AirPlay ska annonseras på (t.ex. Ethernet eller Tailscale). Träder i kraft nästa gång servern startar.",
 
@@ -1542,13 +1544,13 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Hardware-accelerated Direct3D 11/12 video rendering via GStreamer",
             ["AboutBullet3"] = "• Automatic keyframe synchronization & deferred state transitions",
             ["AboutBullet4"] = "• Windows power request display inhibitor to prevent sleep during lectures",
-            ["TrayRestore"] = "Öppna UxPlay Desktop",
+            ["TrayRestore"] = "Öppna AirPlay Desktop",
             ["TrayExit"] = "Avsluta",
         };
 
         _translations["ko"] = new Dictionary<string, string>(_translations["ja"])
         {
-            ["AppTitle"] = "UxPlay Desktop - AirPlay 화면 미러링",
+            ["AppTitle"] = "AirPlay Desktop - AirPlay 화면 미러링",
             ["WindowsAirPlay"] = "Windows AirPlay 리시버",
             ["ServerStopped"] = "서버 정지됨",
             ["ReadyToConnect"] = "연결 준비 완료",
@@ -1563,7 +1565,7 @@ public class LocalizationService : ILocalizationService
             ["PleaseWait"] = "잠시만 기다려주세요...",
             ["SaveSettings"] = "설정 저장",
             ["NetworkAdapterLabel"] = "AirPlay 검색용 네트워크 어댑터",
-            ["NetworkAdapterAuto"] = "자동 (UxPlay가 선택)",
+            ["NetworkAdapterAuto"] = "자동 (AirPlay Desktop가 선택)",
             ["NetworkAdapterRefresh"] = "새로고침",
             ["NetworkAdapterHelp"] = "AirPlay를 알릴 네트워크 어댑터(예: 이더넷 LAN 또는 Tailscale)를 선택합니다. 다음 서버 시작 시 적용됩니다.",
 
@@ -1595,7 +1597,7 @@ public class LocalizationService : ILocalizationService
             ["AboutBullet2"] = "• Hardware-accelerated Direct3D 11/12 video rendering via GStreamer",
             ["AboutBullet3"] = "• Automatic keyframe synchronization & deferred state transitions",
             ["AboutBullet4"] = "• Windows power request display inhibitor to prevent sleep during lectures",
-            ["TrayRestore"] = "UxPlay Desktop 열기",
+            ["TrayRestore"] = "AirPlay Desktop 열기",
             ["TrayExit"] = "종료",
         };
     }

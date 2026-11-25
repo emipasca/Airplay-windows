@@ -31,7 +31,7 @@ public interface IUpdateService
 
 public class UpdateService : IUpdateService
 {
-    private const string GitHubApiUrl = "https://api.github.com/repos/jorjanion/uxplay-desktop/releases/latest";
+    private const string GitHubApiUrl = "https://api.github.com/repos/emipasca/Airplay-windows/releases/latest";
     private readonly HttpClient _httpClient;
 
     public string? LastError { get; private set; }
@@ -42,7 +42,7 @@ public class UpdateService : IUpdateService
         {
             Timeout = TimeSpan.FromMinutes(10)
         };
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "UxPlayDesktop-AutoUpdater");
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "AirPlayDesktop-AutoUpdater");
     }
 
     public async Task<UpdateInfo?> CheckForUpdatesAsync()
@@ -120,7 +120,7 @@ public class UpdateService : IUpdateService
             Directory.CreateDirectory(tempDir);
 
             bool isExe = downloadUrl.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
-            var downloadedFile = Path.Combine(tempDir, isExe ? "UxPlayDesktop-Setup.exe" : "update.zip");
+            var downloadedFile = Path.Combine(tempDir, isExe ? "AirPlayDesktop-Setup.exe" : "update.zip");
 
             // Download stream
             long totalBytes = -1L;

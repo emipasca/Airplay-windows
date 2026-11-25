@@ -40,7 +40,7 @@ if not defined MDNS_SRC if exist "%~dp0runtimes\win-arm64\native\mDNSResponder.e
 if not defined MDNS_SRC (
     if "%IS_SILENT%"=="0" (
         echo [ERROR] No se encontro mDNSResponder.exe en la carpeta actual.
-        echo Asegurate de ejecutar este script desde la carpeta de UxPlay.
+        echo Asegurate de ejecutar este script desde la carpeta de AirPlay Desktop.
         pause
     )
     exit /b 1
@@ -71,26 +71,31 @@ netsh advfirewall firewall add rule name="Bonjour Service (AirPlay)" dir=in acti
 netsh advfirewall firewall add rule name="Bonjour Service (AirPlay)" dir=out action=allow program="%ProgramFiles%\Bonjour\mDNSResponder.exe" enable=yes profile=any >nul 2>&1
 
 netsh advfirewall firewall delete rule name="UxPlay AirPlay Streaming" >nul 2>&1
-netsh advfirewall firewall add rule name="UxPlay AirPlay Streaming" dir=in action=allow protocol=TCP localport=7000,7001,7100 enable=yes profile=any >nul 2>&1
-netsh advfirewall firewall add rule name="UxPlay AirPlay Streaming UDP" dir=in action=allow protocol=UDP localport=6000-6009,7010,7011,5353 enable=yes profile=any >nul 2>&1
+netsh advfirewall firewall delete rule name="UxPlay AirPlay Streaming UDP" >nul 2>&1
+netsh advfirewall firewall delete rule name="AirPlay Desktop Streaming" >nul 2>&1
+netsh advfirewall firewall delete rule name="AirPlay Desktop Streaming UDP" >nul 2>&1
+netsh advfirewall firewall add rule name="AirPlay Desktop Streaming" dir=in action=allow protocol=TCP localport=7000,7001,7100 enable=yes profile=any >nul 2>&1
+netsh advfirewall firewall add rule name="AirPlay Desktop Streaming UDP" dir=in action=allow protocol=UDP localport=6000-6009,7010,7011,5353 enable=yes profile=any >nul 2>&1
 
 :: Limpiar reglas residuales o bloqueos accidentales
 netsh advfirewall firewall delete rule name="uxplay" >nul 2>&1
 netsh advfirewall firewall delete rule name="uxplay-windows" >nul 2>&1
 netsh advfirewall firewall delete rule name="UxPlay Core Engine" >nul 2>&1
 netsh advfirewall firewall delete rule name="UxPlay Desktop UI" >nul 2>&1
+netsh advfirewall firewall delete rule name="AirPlay Desktop Engine" >nul 2>&1
+netsh advfirewall firewall delete rule name="AirPlay Desktop UI" >nul 2>&1
 
-if exist "%ProgramFiles%\UxPlayDesktop\uxplay.exe" (
-    netsh advfirewall firewall add rule name="UxPlay Core Engine" dir=in action=allow program="%ProgramFiles%\UxPlayDesktop\uxplay.exe" enable=yes profile=any >nul 2>&1
+if exist "%ProgramFiles%\AirPlayDesktop\uxplay.exe" (
+    netsh advfirewall firewall add rule name="AirPlay Desktop Engine" dir=in action=allow program="%ProgramFiles%\AirPlayDesktop\uxplay.exe" enable=yes profile=any >nul 2>&1
 )
-if exist "%ProgramFiles%\UxPlayDesktop\UxPlayDesktop.exe" (
-    netsh advfirewall firewall add rule name="UxPlay Desktop UI" dir=in action=allow program="%ProgramFiles%\UxPlayDesktop\UxPlayDesktop.exe" enable=yes profile=any >nul 2>&1
+if exist "%ProgramFiles%\AirPlayDesktop\AirPlayDesktop.exe" (
+    netsh advfirewall firewall add rule name="AirPlay Desktop UI" dir=in action=allow program="%ProgramFiles%\AirPlayDesktop\AirPlayDesktop.exe" enable=yes profile=any >nul 2>&1
 )
 if exist "%~dp0uxplay.exe" (
-    netsh advfirewall firewall add rule name="UxPlay Core Engine" dir=in action=allow program="%~dp0uxplay.exe" enable=yes profile=any >nul 2>&1
+    netsh advfirewall firewall add rule name="AirPlay Desktop Engine" dir=in action=allow program="%~dp0uxplay.exe" enable=yes profile=any >nul 2>&1
 )
-if exist "%~dp0UxPlayDesktop.exe" (
-    netsh advfirewall firewall add rule name="UxPlay Desktop UI" dir=in action=allow program="%~dp0UxPlayDesktop.exe" enable=yes profile=any >nul 2>&1
+if exist "%~dp0AirPlayDesktop.exe" (
+    netsh advfirewall firewall add rule name="AirPlay Desktop UI" dir=in action=allow program="%~dp0AirPlayDesktop.exe" enable=yes profile=any >nul 2>&1
 )
 
 if "%IS_SILENT%"=="0" echo [5/5] Iniciando Bonjour Service...
@@ -103,7 +108,7 @@ if "%IS_SILENT%"=="0" (
     echo ======================================================================
     echo  [OK] CONFIGURACION COMPLETADA CON EXITO!
     echo  Bonjour esta activo y el Firewall esta configurado para AirPlay.
-    echo  Tu iPad y iPhone ya detectaran 'UxPlay Windows' en Duplicar Pantalla.
+    echo  Tu iPad y iPhone ya detectaran 'AirPlay Windows' en Duplicar Pantalla.
     echo ======================================================================
     echo.
     pause

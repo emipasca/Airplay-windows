@@ -18,6 +18,10 @@ public class MockProcessManager : ICoreProcessManager
     public event Action<AirPlaySession>? SessionUpdated;
     public event Action<LogEntry>? LogReceived;
     public event Action<string>? PinCodePrompt;
+    public event Action<string>? MetricsLineReceived;
+    public int? EngineProcessId { get; set; }
+
+    public void TriggerMetrics(string line) => MetricsLineReceived?.Invoke(line);
 
     public Task<bool> StartAsync(AppSettings settings, CancellationToken cancellationToken = default)
     {

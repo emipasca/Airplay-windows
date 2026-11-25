@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    UxPlay Desktop unified build, test, and package automation script.
+    AirPlay Desktop unified build, test, and package automation script.
 .DESCRIPTION
     Builds the native C++ core engine (when MSYS2 is available), compiles the
     modern WPF desktop application for x64 or ARM64, runs unit test suites,
@@ -63,7 +63,7 @@ function Build-NativeCore {
 }
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " UxPlay Desktop Build System [$Action - $Configuration - $Architecture]" -ForegroundColor Cyan
+Write-Host " AirPlay Desktop Build System [$Action - $Configuration - $Architecture]" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 switch ($Action) {
@@ -87,7 +87,7 @@ switch ($Action) {
     "build" {
         Build-NativeCore
 
-        Write-Host "Building UxPlay Desktop WPF Solution ($Configuration - $Architecture)..." -ForegroundColor Yellow
+        Write-Host "Building AirPlay Desktop WPF Solution ($Configuration - $Architecture)..." -ForegroundColor Yellow
         & $DotnetExe build $SolutionPath -c $Configuration --nologo
         Write-Host "Build completed successfully." -ForegroundColor Green
     }
@@ -134,7 +134,7 @@ switch ($Action) {
         )
         foreach ($nativeExe in $nativeCandidates) {
             if (Test-Path $nativeExe) {
-                Write-Host "Bundling native UxPlay core: $nativeExe" -ForegroundColor Green
+                Write-Host "Bundling native AirPlay engine: $nativeExe" -ForegroundColor Green
                 Copy-Item -Path $nativeExe -Destination (Join-Path $publishDir "uxplay.exe") -Force
                 break
             }
@@ -188,9 +188,9 @@ switch ($Action) {
         }
 
         $setupExeName = if ($Architecture -eq "arm64") {
-            "UxPlayDesktop-Windows-ARM64-Setup.exe"
+            "AirPlayDesktop-Windows-ARM64-Setup.exe"
         } else {
-            "UxPlayDesktop-Setup-x64.exe"
+            "AirPlayDesktop-Setup-x64.exe"
         }
 
         if ($isccExe) {
@@ -203,15 +203,15 @@ switch ($Action) {
             Write-Host "Native Setup Installer created successfully: $setupExeName" -ForegroundColor Green
 
             if ($Architecture -eq "x64") {
-                $archSetup = Join-Path $artifactDir "UxPlayDesktop-Setup-x64.exe"
-                $genericSetup = Join-Path $artifactDir "UxPlayDesktop-Setup.exe"
+                $archSetup = Join-Path $artifactDir "AirPlayDesktop-Setup-x64.exe"
+                $genericSetup = Join-Path $artifactDir "AirPlayDesktop-Setup.exe"
                 if (Test-Path $archSetup) {
                     Copy-Item -LiteralPath $archSetup -Destination $genericSetup -Force
                 }
             }
         }
 
-        $zipPath = Join-Path $artifactDir "UxPlayDesktop-$rid.zip"
+        $zipPath = Join-Path $artifactDir "AirPlayDesktop-$rid.zip"
         if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
 
         Write-Host "Creating portable package zip: $zipPath..." -ForegroundColor Yellow

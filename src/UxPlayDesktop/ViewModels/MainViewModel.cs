@@ -69,7 +69,13 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(DisplayClientName));
                 OnPropertyChanged(nameof(DisplayClientIp));
                 OnPropertyChanged(nameof(SessionActiveText));
+                OnPropertyChanged(nameof(IsStreaming));
                 CommandManager.InvalidateRequerySuggested();
+
+                if (value != ServerState.Streaming)
+                {
+                    Metrics.Reset();
+                }
 
                 if (value == ServerState.Streaming)
                 {
@@ -89,6 +95,12 @@ public class MainViewModel : ViewModelBase
 
     public AirPlaySession Session => _processManager.CurrentSession;
     public LogsViewModel Logs { get; }
+
+    /// <summary>Live stream metrics for the dashboard (visible while streaming).</summary>
+    public LiveMetricsViewModel Metrics { get; } = new();
+    public bool IsStreaming => ServerState == ServerState.Streaming;
+    private readonly EngineResourceSampler _resourceSampler = new();
+    private int _resourceSampleInFlight;
     public ILocalizationService Loc => LocalizationService.Instance;
 
     public LanguageItem SelectedLanguage
@@ -180,7 +192,7 @@ public class MainViewModel : ViewModelBase
     public string DisplayTargetFps => string.Format(Loc["TargetFpsFormat"], Settings.TargetFps);
     public string DisplayAudioDelay => string.Format(Loc["AudioDelayFormat"], Settings.AudioDelayMs);
     public string DisplayStep3Desc => string.Format(Loc["Step3Desc"], Settings.ServerName);
-    public string AppVersionDisplay => "UxPlay Desktop v1.2.5";
+    public string AppVersionDisplay => "AirPlay Desktop v1.2.5";
     public string LocalNetworkInfo => GetLocalNetworkInfo(Settings.NetworkAdapterId);
 
     public bool StartOnBoot
@@ -583,6 +595,7 @@ public class MainViewModel : ViewModelBase
 
     public IReadOnlyList<PerformancePreset> AvailablePresets { get; } =
     [
+        PerformancePreset.WorkExtendedDisplay,
         PerformancePreset.TeachingAndPresentation,
         PerformancePreset.LowLatencyGaming,
         PerformancePreset.HighQualityCinema,
@@ -655,6 +668,7 @@ public class MainViewModel : ViewModelBase
         _settings = _settingsService.CurrentSettings;
         PresetOptions =
         [
+            new PresetOption(PerformancePreset.WorkExtendedDisplay),
             new PresetOption(PerformancePreset.TeachingAndPresentation),
             new PresetOption(PerformancePreset.LowLatencyGaming),
             new PresetOption(PerformancePreset.HighQualityCinema),
@@ -664,7 +678,7 @@ public class MainViewModel : ViewModelBase
         _selectedPresetOption = PresetOptions.FirstOrDefault(p => p.Preset == _settings.Preset) ?? PresetOptions[0];
 
         Logs = new LogsViewModel();
-        Logs.AddEntry(new LogEntry { Level = LogLevel.Info, Message = "UxPlay Desktop inicializado. Esperando inicio de sesión o conexiones AirPlay..." });
+        Logs.AddEntry(new LogEntry { Level = LogLevel.Info, Message = "AirPlay Desktop inicializado. Esperando inicio de sesión o conexiones AirPlay..." });
 
         ApplyAccentColor(AccentColor);
         UpdateWindowDimensions(_settings.CompactMode);
@@ -700,6 +714,10 @@ public class MainViewModel : ViewModelBase
         _processManager.SessionUpdated += _ => RunOnUi(OnSessionUpdated);
         _processManager.LogReceived += entry => RunOnUi(() => Logs.AddEntry(entry));
         _processManager.PinCodePrompt += pin => RunOnUi(() => ActivePinCode = pin);
+        _processManager.MetricsLineReceived += line => RunOnUi(() =>
+        {
+            if (IsStreaming) Metrics.ApplyLine(line, DateTime.Now);
+        });
 
         ToggleServerCommand = new RelayCommand(async () => await ToggleServerAsync());
         SaveSettingsCommand = new RelayCommand(SaveSettings);
@@ -739,7 +757,11 @@ public class MainViewModel : ViewModelBase
         {
             Interval = TimeSpan.FromSeconds(1)
         };
-        _sessionTimer.Tick += (_, _) => UpdateDuration();
+        _sessionTimer.Tick += (_, _) =>
+        {
+            UpdateDuration();
+            SampleLiveMetrics();
+        };
         _sessionTimer.Start();
 
         _updateCheckTimer = new DispatcherTimer
@@ -1031,6 +1053,34 @@ public class MainViewModel : ViewModelBase
         }, ct);
     }
 
+    /// <summary>Once per second while streaming: re-check idleness and sample the engine's
+    /// CPU/RAM/GPU use on a background thread (GPU counter enumeration can take ~50 ms).</summary>
+    private void SampleLiveMetrics()
+    {
+        if (!IsStreaming) return;
+
+        Metrics.Refresh(DateTime.Now);
+        if (System.Threading.Interlocked.Exchange(ref _resourceSampleInFlight, 1) == 1) return;
+
+        var pid = _processManager.EngineProcessId;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var sample = _resourceSampler.Sample(pid);
+                RunOnUi(() =>
+                {
+                    if (IsStreaming) Metrics.ApplyResources(sample, DateTime.Now);
+                });
+            }
+            catch { }
+            finally
+            {
+                System.Threading.Interlocked.Exchange(ref _resourceSampleInFlight, 0);
+            }
+        });
+    }
+
     private void UpdateDuration()
     {
         if (Session.ConnectedAt.HasValue && ServerState == ServerState.Streaming)
@@ -1072,7 +1122,7 @@ public class MainViewModel : ViewModelBase
         try
         {
             var dir = string.IsNullOrWhiteSpace(Settings.RecordingDirectory)
-                ? System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "UxPlay")
+                ? System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AirPlay Desktop")
                 : Settings.RecordingDirectory;
 
             System.IO.Directory.CreateDirectory(dir);

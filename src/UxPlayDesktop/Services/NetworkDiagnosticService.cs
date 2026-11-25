@@ -102,7 +102,7 @@ public class NetworkDiagnosticService : INetworkDiagnosticService
                     Category = "mDNS / Bonjour",
                     Title = "Apple Bonjour Service",
                     Severity = DiagnosticSeverity.Warning,
-                    Message = "Bonjour is not registered as a Windows Service. UxPlay will rely on embedded mDNS.",
+                    Message = "Bonjour is not registered as a Windows Service. AirPlay Desktop will rely on embedded mDNS.",
                     Recommendation = "Click 'Repair / Start Bonjour' to register mDNSResponder for maximum discovery reliability."
                 });
                 break;
@@ -178,7 +178,7 @@ public class NetworkDiagnosticService : INetworkDiagnosticService
                     Title = "Virtual Network Adapters",
                     Severity = DiagnosticSeverity.Warning,
                     Message = $"Detected {virtuals.Count} virtual adapter(s) ({string.Join(", ", virtuals.Select(v => v.Name))}).",
-                    Recommendation = "If your iPad fails to discover UxPlay, make sure it is connected to the same subnet as your primary physical adapter."
+                    Recommendation = "If your iPad fails to discover AirPlay Desktop, make sure it is connected to the same subnet as your primary physical adapter."
                 });
             }
         }
@@ -234,7 +234,7 @@ public class NetworkDiagnosticService : INetworkDiagnosticService
             var psi = new ProcessStartInfo
             {
                 FileName = "netsh",
-                Arguments = "advfirewall firewall show rule name=\"UxPlay AirPlay Streaming\"",
+                Arguments = "advfirewall firewall show rule name=\"AirPlay Desktop Streaming\"",
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 RedirectStandardOutput = true
@@ -244,7 +244,7 @@ public class NetworkDiagnosticService : INetworkDiagnosticService
             var output = proc?.StandardOutput.ReadToEnd() ?? string.Empty;
             proc?.WaitForExit();
 
-            if (output.Contains("UxPlay AirPlay Streaming", StringComparison.OrdinalIgnoreCase))
+            if (output.Contains("AirPlay Desktop Streaming", StringComparison.OrdinalIgnoreCase))
             {
                 report.Results.Add(new DiagnosticItem
                 {
@@ -261,7 +261,7 @@ public class NetworkDiagnosticService : INetworkDiagnosticService
                     Category = "Firewall",
                     Title = "Windows Firewall Rules",
                     Severity = DiagnosticSeverity.Warning,
-                    Message = "Specific UxPlay streaming firewall rules were not found.",
+                    Message = "Specific AirPlay Desktop streaming firewall rules were not found.",
                     Recommendation = "Run 'Repair Bonjour & Firewall' to automatically add the required firewall allow rules."
                 });
             }

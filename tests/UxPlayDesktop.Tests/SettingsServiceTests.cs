@@ -30,8 +30,8 @@ public class SettingsServiceTests : IDisposable
         var settings = service.Load();
 
         Assert.NotNull(settings);
-        Assert.Equal("UxPlay Windows", settings.ServerName);
-        Assert.Equal(PerformancePreset.TeachingAndPresentation, settings.Preset);
+        Assert.Equal("AirPlay Windows", settings.ServerName);
+        Assert.Equal(PerformancePreset.WorkExtendedDisplay, settings.Preset);
         Assert.Equal(1920, settings.DisplayWidth);
         Assert.Equal(1080, settings.DisplayHeight);
         Assert.Equal(60, settings.TargetFps);
@@ -78,6 +78,6 @@ public class SettingsServiceTests : IDisposable
         var settings = service.Load();
 
         Assert.NotNull(settings);
-        Assert.Equal("UxPlay Windows", settings.ServerName);
+        Assert.Equal("AirPlay Windows", settings.ServerName);
     }
 }

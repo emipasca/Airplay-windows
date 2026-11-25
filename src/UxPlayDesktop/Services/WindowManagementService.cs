@@ -283,7 +283,7 @@ public class WindowManagementService : IWindowManagementService
         try
         {
             var dir = string.IsNullOrWhiteSpace(outputDirectory)
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "UxPlay")
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "AirPlay Desktop")
                 : outputDirectory;
 
             Directory.CreateDirectory(dir);
@@ -309,7 +309,7 @@ public class WindowManagementService : IWindowManagementService
                 Int32Rect.Empty,
                 BitmapSizeOptions.FromEmptyOptions());
 
-            var filePath = Path.Combine(dir, $"UxPlay_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+            var filePath = Path.Combine(dir, $"AirPlay_{DateTime.Now:yyyyMMdd_HHmmss}.png");
             using (var fs = new FileStream(filePath, FileMode.Create))
             {
                 var encoder = new PngBitmapEncoder();

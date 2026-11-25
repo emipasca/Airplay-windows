@@ -5,7 +5,7 @@ namespace UxPlayDesktop.Models;
 public class AppSettings
 {
     // General
-    public string ServerName { get; set; } = "UxPlay Windows";
+    public string ServerName { get; set; } = "AirPlay Windows";
     public string Language { get; set; } = "auto";
     public bool StartOnBoot { get; set; } = false;
     public bool MinimizeToTray { get; set; } = true;
@@ -15,7 +15,7 @@ public class AppSettings
 
     // Preset & Streaming
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public PerformancePreset Preset { get; set; } = PerformancePreset.TeachingAndPresentation;
+    public PerformancePreset Preset { get; set; } = PerformancePreset.WorkExtendedDisplay;
 
     // Video Configuration
     public int DisplayWidth { get; set; } = 1920;

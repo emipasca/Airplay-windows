@@ -16,6 +16,10 @@ public interface ICoreProcessManager
     event Action<AirPlaySession>? SessionUpdated;
     event Action<LogEntry>? LogReceived;
     event Action<string>? PinCodePrompt;
+    /// <summary>Raw engine "METRICS ..." lines (kept out of the log view).</summary>
+    event Action<string>? MetricsLineReceived;
+    /// <summary>PID of the running engine process, or null when it is not running.</summary>
+    int? EngineProcessId { get; }
 
     Task<bool> StartAsync(AppSettings settings, CancellationToken cancellationToken = default);
     Task StopAsync();
@@ -39,6 +43,16 @@ public class CoreProcessManager : ICoreProcessManager, IDisposable
     public event Action<AirPlaySession>? SessionUpdated;
     public event Action<LogEntry>? LogReceived;
     public event Action<string>? PinCodePrompt;
+    public event Action<string>? MetricsLineReceived;
+
+    public int? EngineProcessId
+    {
+        get
+        {
+            try { return IsRunning ? _process!.Id : null; }
+            catch { return null; }
+        }
+    }
 
     public CoreProcessManager(IArgumentBuilder argumentBuilder, ILogParser logParser)
     {
@@ -125,7 +139,7 @@ public class CoreProcessManager : ICoreProcessManager, IDisposable
         var exePath = FindCoreExecutablePath();
         if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
         {
-            Log(LogLevel.Error, "UxPlay native engine binary ('uxplay.exe') not found in deployment directory.");
+            Log(LogLevel.Error, "AirPlay engine binary ('uxplay.exe') not found in deployment directory.");
             SetState(ServerState.Error);
             return false;
         }
@@ -304,6 +318,12 @@ public class CoreProcessManager : ICoreProcessManager, IDisposable
     {
         if (string.IsNullOrWhiteSpace(data)) return;
 
+        if (StreamMetricsParser.IsMetricsLine(data))
+        {
+            MetricsLineReceived?.Invoke(data);
+            return;
+        }
+
         var result = _logParser.ParseLine(data);
         LogReceived?.Invoke(result.LogEntry);
 
@@ -367,7 +387,7 @@ public class CoreProcessManager : ICoreProcessManager, IDisposable
 
     private void OnProcessExited()
     {
-        Log(LogLevel.Info, "UxPlay engine process terminated.");
+        Log(LogLevel.Info, "AirPlay engine process terminated.");
         SetState(ServerState.Stopped);
         ResetSession();
     }

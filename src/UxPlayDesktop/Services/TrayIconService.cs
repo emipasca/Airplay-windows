@@ -105,7 +105,7 @@ public class TrayIconService : ITrayIconService
             uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP,
             uCallbackMessage = WM_TRAY,
             hIcon = _hIcon,
-            szTip = "UxPlay Desktop - AirPlay Mirroring"
+            szTip = "AirPlay Desktop - AirPlay Mirroring"
         };
 
         _isCreated = Shell_NotifyIcon(NIM_ADD, ref _nid);
@@ -196,7 +196,7 @@ public class TrayIconService : ITrayIconService
 
         var headerItem = new MenuItem
         {
-            Header = "UxPlay Desktop",
+            Header = "AirPlay Desktop",
             FontWeight = FontWeights.Bold,
             Foreground = System.Windows.Media.Brushes.White,
             Padding = new Thickness(12, 6, 12, 6)

@@ -1,4 +1,4 @@
-; UxPlay Desktop - Inno Setup Script
+; AirPlay Desktop - Inno Setup Script
 ; High-performance, self-contained Windows AirPlay installer
 
 #ifndef AppArch
@@ -8,28 +8,28 @@
 #if AppArch == "arm64"
   #define SetupArchAllowed "arm64"
   #define SetupArch64BitMode "arm64"
-  #define OutputName "UxPlayDesktop-Windows-ARM64-Setup"
+  #define OutputName "AirPlayDesktop-Windows-ARM64-Setup"
 #else
   #define SetupArchAllowed "x64compatible"
   #define SetupArch64BitMode "x64compatible"
-  #define OutputName "UxPlayDesktop-Setup-x64"
+  #define OutputName "AirPlayDesktop-Setup-x64"
 #endif
 
-#define MyAppName "UxPlay Desktop"
+#define MyAppName "AirPlay Desktop"
 #define MyAppVersion "1.2.5"
-#define MyAppPublisher "jorjanion"
-#define MyAppURL "https://github.com/jorjanion/uxplay-desktop"
-#define MyAppExeName "UxPlayDesktop.exe"
+#define MyAppPublisher "emipasca"
+#define MyAppURL "https://github.com/emipasca/Airplay-windows"
+#define MyAppExeName "AirPlayDesktop.exe"
 
 [Setup]
-AppId={{D37F61CA-73E1-4B9F-841A-93C3806C9B01}
+AppId={{5C4C2977-C41E-4CCD-9348-B37010303D27}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 AppUpdatesURL={#MyAppURL}/releases
-DefaultDirName={autopf}\UxPlayDesktop
+DefaultDirName={autopf}\AirPlayDesktop
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE
@@ -68,18 +68,18 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 
 [CustomMessages]
-english.AutoStartDesc=Launch UxPlay Desktop automatically on Windows startup
-spanish.AutoStartDesc=Iniciar UxPlay Desktop automáticamente al arrancar Windows
-french.AutoStartDesc=Lancer UxPlay Desktop automatiquement au démarrage de Windows
-german.AutoStartDesc=UxPlay Desktop automatisch beim Windows-Start ausführen
-italian.AutoStartDesc=Avvia automaticamente UxPlay Desktop all'avvio di Windows
-portuguese.AutoStartDesc=Iniciar o UxPlay Desktop automaticamente ao iniciar o Windows
-brazilianportuguese.AutoStartDesc=Iniciar o UxPlay Desktop automaticamente ao iniciar o Windows
-russian.AutoStartDesc=Автоматически запускать UxPlay Desktop при загрузке Windows
-polish.AutoStartDesc=Uruchamiaj UxPlay Desktop automatycznie podczas uruchamiania systemu Windows
-dutch.AutoStartDesc=UxPlay Desktop automatisch starten bij het opstarten van Windows
-japanese.AutoStartDesc=Windows起動時にUxPlay Desktopを自動起動する
-ukrainian.AutoStartDesc=Автоматично запускати UxPlay Desktop під час завантаження Windows
+english.AutoStartDesc=Launch AirPlay Desktop automatically on Windows startup
+spanish.AutoStartDesc=Iniciar AirPlay Desktop automáticamente al arrancar Windows
+french.AutoStartDesc=Lancer AirPlay Desktop automatiquement au démarrage de Windows
+german.AutoStartDesc=AirPlay Desktop automatisch beim Windows-Start ausführen
+italian.AutoStartDesc=Avvia automaticamente AirPlay Desktop all'avvio di Windows
+portuguese.AutoStartDesc=Iniciar o AirPlay Desktop automaticamente ao iniciar o Windows
+brazilianportuguese.AutoStartDesc=Iniciar o AirPlay Desktop automaticamente ao iniciar o Windows
+russian.AutoStartDesc=Автоматически запускать AirPlay Desktop при загрузке Windows
+polish.AutoStartDesc=Uruchamiaj AirPlay Desktop automatycznie podczas uruchamiania systemu Windows
+dutch.AutoStartDesc=AirPlay Desktop automatisch starten bij het opstarten van Windows
+japanese.AutoStartDesc=Windows起動時にAirPlay Desktopを自動起動する
+ukrainian.AutoStartDesc=Автоматично запускати AirPlay Desktop під час завантаження Windows
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
@@ -94,12 +94,12 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Registry]
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "UxPlayDesktop"; ValueData: """{app}\{#MyAppExeName}"" --minimized"; Flags: uninsdeletevalue; Tasks: autostart
+Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "AirPlayDesktop"; ValueData: """{app}\{#MyAppExeName}"" --minimized"; Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
 ; Automatically configure Bonjour Service and open Windows Firewall ports for AirPlay
 Filename: "{app}\fix_bonjour.bat"; Parameters: "/silent"; Flags: runhidden waituntilterminated
-; Always launch UxPlay Desktop immediately upon completion
+; Always launch AirPlay Desktop immediately upon completion
 Filename: "{app}\{#MyAppExeName}"; Flags: nowait
 
 [UninstallRun]
@@ -112,7 +112,7 @@ var
 begin
   Result := True;
   // Silently terminate running instances (WITHOUT /T to prevent killing the installer if spawned as a child from the running app)
-  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM UxPlayDesktop.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM AirPlayDesktop.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM uxplay.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   // Allow Windows and .NET runtime to cleanly release all DLL file locks
   Sleep(800);
@@ -124,7 +124,7 @@ var
 begin
   Result := True;
   // Silently terminate running instances before uninstallation (WITHOUT /T)
-  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM UxPlayDesktop.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM AirPlayDesktop.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM uxplay.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;
 

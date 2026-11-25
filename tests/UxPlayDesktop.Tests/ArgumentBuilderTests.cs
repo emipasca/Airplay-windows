@@ -38,6 +38,38 @@ public class ArgumentBuilderTests
     }
 
     [Fact]
+    public void BuildArguments_WorkPreset_Uses1440p16x10GpuPipelineWithoutAudio()
+    {
+        var settings = new AppSettings
+        {
+            Preset = PerformancePreset.WorkExtendedDisplay,
+            EnableAudio = true,        // Work forces audio off regardless
+            DisplayWidth = 3440,       // and ignores the generic resolution fields
+            DisplayHeight = 1440,
+            AudioDelayMs = 120
+        };
+
+        var args = _builder.BuildArguments(settings).ToList();
+
+        Assert.Equal("2304x1440@60", args[args.IndexOf("-s") + 1]);
+        Assert.Equal("60", args[args.IndexOf("-fps") + 1]);
+        Assert.Contains("-h265", args);
+        Assert.Equal("d3d12h264dec", args[args.IndexOf("-vd") + 1]);
+        Assert.Equal("d3d12videosink", args[args.IndexOf("-vs") + 1]);
+        Assert.Equal("no", args[args.IndexOf("-vsync") + 1]);
+        Assert.Single(args, a => a == "-vsync");
+        Assert.Equal("0", args[args.IndexOf("-as") + 1]);
+        Assert.DoesNotContain("3440x1440", args);
+    }
+
+    [Fact]
+    public void Work_IsDefaultPreset_And16x10()
+    {
+        Assert.Equal(PerformancePreset.WorkExtendedDisplay, new AppSettings().Preset);
+        Assert.Equal(16.0 / 10.0, (double)WorkPreset.Width / WorkPreset.Height, 3);
+    }
+
+    [Fact]
     public void BuildArguments_AudioOnlyPreset_DisablesVideoSink()
     {
         var settings = new AppSettings
@@ -109,6 +141,7 @@ public class ArgumentBuilderTests
     {
         var settings = new AppSettings
         {
+            Preset = PerformancePreset.TeachingAndPresentation,
             EnableAudio = true,
             AudioDelayMs = 75
         };
@@ -153,6 +186,7 @@ public class ArgumentBuilderTests
     {
         var settings = new AppSettings
         {
+            Preset = PerformancePreset.TeachingAndPresentation,
             AudioDelayMs = -120
         };
 
@@ -213,6 +247,7 @@ public class ArgumentBuilderTests
     {
         var settings = new AppSettings
         {
+            Preset = PerformancePreset.TeachingAndPresentation,
             IsMuted = false,
             AudioVolume = 0.65
         };

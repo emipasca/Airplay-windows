@@ -195,6 +195,46 @@ static const char jpeg_caps[]="image/jpeg";
 static const char h264_caps[]="video/x-h264,stream-format=(string)byte-stream,alignment=(string)au";
 static const char h265_caps[]="video/x-h265,stream-format=(string)byte-stream,alignment=(string)au";
 
+/* Airplay-windows: once per second, log video-sink frame counters and pipeline latency
+ * ("METRICS render ..."), parsed by the desktop app. rendered/dropped are cumulative. */
+static void log_render_metrics(video_renderer_t *r) {
+    static gint64 last_us = 0;
+    gint64 now_us = g_get_monotonic_time();
+    if (!last_us) last_us = now_us;
+    if (now_us - last_us < G_USEC_PER_SEC || !r || !r->pipeline) return;
+    last_us = now_us;
+
+    guint64 rendered = 0, dropped = 0;
+    GstIterator *it = gst_bin_iterate_sinks(GST_BIN(r->pipeline));
+    GValue item = G_VALUE_INIT;
+    if (gst_iterator_next(it, &item) == GST_ITERATOR_OK) {
+        GstElement *sink = GST_ELEMENT(g_value_get_object(&item));
+        GstStructure *stats = NULL;
+        g_object_get(sink, "stats", &stats, NULL);
+        if (stats) {
+            gst_structure_get_uint64(stats, "rendered", &rendered);
+            gst_structure_get_uint64(stats, "dropped", &dropped);
+            gst_structure_free(stats);
+        }
+        g_value_reset(&item);
+    }
+    g_value_unset(&item);
+    gst_iterator_free(it);
+
+    double pipeline_latency_ms = -1.0;
+    GstQuery *query = gst_query_new_latency();
+    if (gst_element_query(r->pipeline, query)) {
+        gboolean live = FALSE;
+        GstClockTime min_latency = 0, max_latency = 0;
+        gst_query_parse_latency(query, &live, &min_latency, &max_latency);
+        if (GST_CLOCK_TIME_IS_VALID(min_latency)) pipeline_latency_ms = (double) min_latency / 1.0e6;
+    }
+    gst_query_unref(query);
+
+    logger_log(logger, LOGGER_INFO, "METRICS render rendered=%" G_GUINT64_FORMAT " dropped=%" G_GUINT64_FORMAT
+               " pipeline_latency_ms=%.1f", rendered, dropped, pipeline_latency_ms);
+}
+
 GstElement *make_video_sink(const char *videosink, const char *videosink_options) {
     /* used to build a videosink for playbin, using the user-specified string "videosink" */ 
     GstElement *video_sink = gst_element_factory_make(videosink, "videosink");
@@ -663,6 +703,7 @@ uint64_t video_renderer_render_buffer(unsigned char* data, int *data_len, int *n
         }
         gst_buffer_fill(buffer, 0, data, *data_len);
         gst_app_src_push_buffer (GST_APP_SRC(renderer->appsrc), buffer);
+        log_render_metrics(renderer);
 #ifdef X_DISPLAY_FIX
         if (renderer->gst_window && !(renderer->gst_window->window) && renderer->use_x11) {
             X11_search_attempts++;

@@ -7,6 +7,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>..\..\resources\newicon.ico</ApplicationIcon>
+    <AssemblyName>AirPlayDesktop</AssemblyName>
+    <Product>AirPlay Desktop</Product>
+    <AssemblyTitle>AirPlay Desktop</AssemblyTitle>
+    <Description>AirPlay receiver for Windows (based on jorjanion/uxplay-desktop and FDH2/UxPlay, GPL-3.0)</Description>
     <Version>1.2.5</Version>
     <AssemblyVersion>1.2.5.0</AssemblyVersion>
     <FileVersion>1.2.5.0</FileVersion>
@@ -15,6 +19,10 @@
   <ItemGroup>
     <Resource Include="..\..\resources\newicon.ico" Link="resources\newicon.ico" />
     <None Include="..\..\resources\newicon.ico" Link="resources\newicon.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.1" />
   </ItemGroup>
 
 </Project>

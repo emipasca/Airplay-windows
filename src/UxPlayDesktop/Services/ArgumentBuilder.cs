@@ -72,6 +72,23 @@ public class ArgumentBuilder : IArgumentBuilder
                 args.Add("0");
                 break;
 
+            case PerformancePreset.WorkExtendedDisplay:
+                // MacBook as extended desktop: 16:10 at 1440p (1:1 on a 1440p monitor), 60 fps,
+                // H.265 + D3D12 GPU decode/render with no cross-API copies, video shown without
+                // waiting on audio sync. Audio is forced off below (sound stays on the Mac).
+                args.Add("-s");
+                args.Add($"{WorkPreset.Width}x{WorkPreset.Height}@{WorkPreset.Fps}");
+                args.Add("-fps");
+                args.Add($"{WorkPreset.Fps}");
+                args.Add("-h265");
+                args.Add("-vd");
+                args.Add(WorkPreset.Decoder);
+                args.Add("-vs");
+                args.Add(WorkPreset.VideoSink);
+                args.Add("-vsync");
+                args.Add("no");
+                break;
+
             case PerformancePreset.Custom:
                 args.Add("-s");
                 args.Add($"{settings.DisplayWidth}x{settings.DisplayHeight}");
@@ -93,7 +110,7 @@ public class ArgumentBuilder : IArgumentBuilder
         }
 
         // Audio
-        if (!settings.EnableAudio || settings.IsMuted)
+        if (!settings.EnableAudio || settings.IsMuted || settings.Preset == PerformancePreset.WorkExtendedDisplay)
         {
             args.Add("-as");
             args.Add("0");
@@ -123,7 +140,7 @@ public class ArgumentBuilder : IArgumentBuilder
         if (settings.EnableRecording)
         {
             var dir = string.IsNullOrWhiteSpace(settings.RecordingDirectory)
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "UxPlay")
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AirPlay Desktop")
                 : settings.RecordingDirectory;
 
             try { Directory.CreateDirectory(dir); } catch { }
