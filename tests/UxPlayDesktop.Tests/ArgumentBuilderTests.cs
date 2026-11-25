@@ -27,7 +27,7 @@ public class ArgumentBuilderTests
 
         Assert.Contains("-n", args);
         Assert.Contains("Math Lecture Mirror", args);
-        Assert.Contains("-nh", args);
+        Assert.DoesNotContain("-nh", args);   // engine appends "@<hostname>" to the name
         Assert.Contains("-s", args);
         Assert.Contains("1920x1080", args);
         Assert.Contains("-fps", args);

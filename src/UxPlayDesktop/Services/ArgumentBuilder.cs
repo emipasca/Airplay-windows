@@ -26,8 +26,8 @@ public class ArgumentBuilder : IArgumentBuilder
         args.Add("-n");
         args.Add(serverName);
 
-        // Do not hold connection if new device attempts to connect (-nh)
-        args.Add("-nh");
+        // No "-nh": let the engine append "@<PC hostname>" so the receiver is
+        // discoverable as e.g. "AirPlay Windows@Emilio-PC25".
 
         // Apply Preset specific configurations
         switch (settings.Preset)
